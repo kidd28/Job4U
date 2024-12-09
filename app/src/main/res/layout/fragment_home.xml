@@ -5,10 +5,9 @@
     android:layout_height="match_parent"
     tools:context=".ApplicantFragments.HomeFragment">
 
-    <!-- TODO: Update blank fragment layout -->
-    <TextView
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewApplicantJobs"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="Home" />
+        android:layout_height="match_parent" />
 
 </FrameLayout>

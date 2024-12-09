@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-
     id("com.google.gms.google-services")
+    id("kotlin-parcelize")
 }
 
 android {
@@ -60,6 +60,9 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation (libs.firebase.database)
     implementation (libs.firebase.storage)
+    implementation(libs.circleimageview)
+    implementation(libs.glide)
+    implementation (libs.play.services.auth)
 
 
 }

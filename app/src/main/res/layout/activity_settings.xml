@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Settings">
+
+    <LinearLayout
+        android:layout_margin="@dimen/_25sdp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/settings_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:gravity="center"
+            android:text="Settings"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- Other settings options (add more as needed) -->
+        <TextView
+            android:id="@+id/profile_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/settings_item_background"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="12dp"
+            android:text="Edit Profile"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/privacy_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/settings_item_background"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="12dp"
+            android:text="Privacy Settings"
+            android:textSize="18sp" />
+
+    </LinearLayout>
+    <!-- Sign Out Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/sign_out_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/_20sdp"
+        android:padding="@dimen/_14sdp"
+        android:text="Sign out"
+        android:layout_marginBottom="@dimen/_25sdp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="@dimen/_40sdp"
+        android:layout_marginEnd="@dimen/_40sdp"
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/_12sdp"
+        app:backgroundTint="@color/black"
+        app:cornerRadius="@dimen/_14sdp" />
+</RelativeLayout>

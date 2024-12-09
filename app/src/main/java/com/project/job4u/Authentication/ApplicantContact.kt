@@ -36,7 +36,6 @@ class ApplicantContact : AppCompatActivity() {
     private lateinit var resumeButton: MaterialButton
     private lateinit var resume_uploaded_text: TextView
     private lateinit var save: MaterialButton
-
     private val REQUEST_CODE = 1000
     private lateinit var storageReference: FirebaseStorage
     private lateinit var databaseReference: FirebaseDatabase
@@ -165,7 +164,7 @@ class ApplicantContact : AppCompatActivity() {
             val fileName = getFileName(fileUri)
 
             // Update the TextView with the file name
-            resume_uploaded_text.text = fileName
+            resume_uploaded_text.text = "  "+fileName
             resume_uploaded_text.visibility = View.VISIBLE
             // Upload the file to Firebase
             uploadFileToFirebase(fileUri, fileName)
@@ -181,7 +180,7 @@ class ApplicantContact : AppCompatActivity() {
         fileReference.putFile(fileUri)
             .addOnSuccessListener {
                 fileReference.downloadUrl.addOnSuccessListener { downloadUrl ->
-                    saveFileLinkToDatabase(userId, downloadUrl.toString())
+                    saveFileLinkToDatabase(userId, downloadUrl.toString(),fileName)
                 }
             }
             .addOnFailureListener { e ->
@@ -190,10 +189,11 @@ class ApplicantContact : AppCompatActivity() {
     }
 
     // Save the file download link to Firebase Database
-    private fun saveFileLinkToDatabase(userId: String, fileUrl: String) {
+    private fun saveFileLinkToDatabase(userId: String, fileUrl: String, fileName: String) {
         val userResumeRef = databaseReference.reference.child("users").child(userId)
         val userData = mapOf(
-            "resume" to fileUrl)
+            "resume" to fileUrl,
+            "fileName" to fileName)
         userResumeRef.updateChildren(userData)
             .addOnSuccessListener {
                 Toast.makeText(this, "Resume link saved successfully!", Toast.LENGTH_SHORT).show()

@@ -22,7 +22,7 @@ import com.project.job4u.Authentication.SignInActivity
 import com.project.job4u.ApplicantFragments.ApplicationsFragment
 import com.project.job4u.ApplicantFragments.HomeFragment
 import com.project.job4u.ApplicantFragments.SavedFragment
-import com.project.job4u.ApplicantFragments.SearchFragment
+import com.project.job4u.ApplicantFragments.ProfileFragment
 import com.project.job4u.EmployerFragments.Applications
 import com.project.job4u.EmployerFragments.CompanyProfile
 import com.project.job4u.EmployerFragments.JobPosted
@@ -77,8 +77,8 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             // User is not signed in, show "Sign In"
-            loadFragment(HomeFragment())
             showApplicantDashboard()
+            loadFragment(HomeFragment())
             toolbarButton.text = "Sign In"
             toolbarButton.setOnClickListener {
                 // Start SignInActivity when the button is clicked
@@ -142,7 +142,8 @@ class MainActivity : AppCompatActivity() {
                 if (name != null) {
                     toolbarButton.text = name
                     toolbarButton.setOnClickListener {
-                        FirebaseAuth.getInstance().signOut()
+                        val i = Intent(this@MainActivity,Settings::class.java)
+                        startActivity(i)
                     }
                 }
             }
@@ -151,8 +152,6 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
-
-
     private fun fetchCompanyName(companyId: String) {
         // Reference to the company's data in Firebase Database
         val companyRef = FirebaseDatabase.getInstance().getReference("companies").child(companyId)
@@ -163,7 +162,8 @@ class MainActivity : AppCompatActivity() {
                 if (companyName != null) {
                     toolbarButton.text = companyName
                     toolbarButton.setOnClickListener {
-                        FirebaseAuth.getInstance().signOut()
+                        val i = Intent(this@MainActivity,Settings::class.java)
+                        startActivity(i)
                     }
                 }
             }
@@ -174,32 +174,34 @@ class MainActivity : AppCompatActivity() {
         })
     }
     private fun showEmployerDashboard() {
-        // Show employer fragments and bottom nav
-        bottomNav.menu.clear()  // Clear existing menu
-        bottomNav.inflateMenu(R.menu.bottom_nav_menu_employer)  // Inflate employer menu
 
         loadFragment(JobPosted())
-
+        bottomNav.menu.clear()
+        bottomNav.inflateMenu(R.menu.bottom_nav_menu_employer)  // Inflate employer menu
         bottomNav.setOnNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_job_posted -> loadFragment(JobPosted())
                 R.id.nav_post_job -> loadFragment(PostJob())
                 R.id.nav_applications -> loadFragment(Applications())
                 R.id.nav_profile -> loadFragment(CompanyProfile())
+                else ->JobPosted()
             }
             true
         }
     }
 
     private fun showApplicantDashboard() {
-        //control bottom nav
+        // Show applicant fragments and bottom nav
+        loadFragment(HomeFragment())
+        bottomNav.menu.clear()
+        bottomNav.inflateMenu(R.menu.bottom_nav_menu)
         bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
         bottomNav.setOnNavigationItemSelectedListener { menuItem ->
             val selectedFragment = when (menuItem.itemId) {
                 R.id.nav_home -> HomeFragment()
-                R.id.nav_search -> SearchFragment()
                 R.id.nav_applications -> ApplicationsFragment()
                 R.id.nav_saved -> SavedFragment()
+                R.id.nav_profile -> ProfileFragment()
                 else -> HomeFragment()
             }
             loadFragment(selectedFragment)
@@ -207,4 +209,5 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
+
 }

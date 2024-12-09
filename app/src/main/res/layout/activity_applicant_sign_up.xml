@@ -21,7 +21,6 @@
             android:layout_centerHorizontal="true"
             android:layout_marginTop="@dimen/_40sdp"
             />
-
         <!-- Linear Layout for Form Elements (email, password, buttons) -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -31,7 +30,20 @@
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:padding="@dimen/_14sdp">
-
+            <TextView
+                android:id="@+id/sign_up_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="left"
+                android:shadowColor="#2196F3"
+                android:layout_marginBottom="@dimen/_10sdp"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="4"
+                android:text="Applicant Sign Up"
+                android:textColor="#2196F3"
+                android:textSize="@dimen/_20sdp"
+                android:textStyle="bold" />
             <!-- Email Input Field with Material Design -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/email_input_layout"
@@ -94,7 +106,7 @@
                 android:layout_marginEnd="@dimen/_40sdp"
                 android:textColor="@android:color/white"
                 android:textSize="@dimen/_12sdp"
-                app:backgroundTint="@color/black"
+                app:backgroundTint="#2196F3"
                 app:cornerRadius="@dimen/_14sdp" />
             <LinearLayout
                 android:layout_width="match_parent"
@@ -138,7 +150,7 @@
                 android:textSize="@dimen/_12sdp"
                 android:layout_marginStart="@dimen/_40sdp"
                 android:layout_marginEnd="@dimen/_40sdp"
-                app:backgroundTint="@color/black"
+                app:backgroundTint="#2196F3"
                 app:cornerRadius="@dimen/_14sdp"
                 app:icon="@drawable/google"
                 app:iconGravity="start"

@@ -1,14 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".EmployerFragments.CompanyProfile">
 
-    <!-- TODO: Update blank fragment layout -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+    <LinearLayout
 
-</FrameLayout>
+        android:layout_margin="@dimen/_25sdp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Circular Image for Company -->
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/company_image"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_profile" />
+
+        <!-- Company Name -->
+        <TextView
+            android:id="@+id/company_name_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Company Name"
+            android:textAppearance="?attr/textAppearanceHeadline6"
+            android:textAlignment="center" />
+
+        <!-- Email -->
+        <TextView
+            android:gravity="center"
+            android:id="@+id/company_email_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Company Email"
+            android:textAppearance="?attr/textAppearanceBody1" />
+
+        <!-- Phone -->
+        <TextView
+            android:id="@+id/company_phone_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Phone Number"
+            android:textAppearance="?attr/textAppearanceBody1" />
+
+        <!-- Website -->
+        <TextView
+            android:id="@+id/company_website_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Website"
+            android:textAppearance="?attr/textAppearanceBody1" />
+
+        <!-- Address -->
+        <TextView
+            android:id="@+id/company_address_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Address"
+            android:textAppearance="?attr/textAppearanceBody1" />
+
+        <!-- Business Type -->
+        <TextView
+            android:id="@+id/business_type_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Business Type"
+            android:textAppearance="?attr/textAppearanceBody1" />
+        <!-- Company Size -->
+        <TextView
+            android:id="@+id/company_size_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Company Size"
+            android:textAppearance="?attr/textAppearanceBody1" />
+        <!-- Description -->
+        <TextView
+            android:id="@+id/company_description_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Description"
+            android:textAppearance="?attr/textAppearanceBody1" />
+
+
+    </LinearLayout>
+
+</ScrollView>
