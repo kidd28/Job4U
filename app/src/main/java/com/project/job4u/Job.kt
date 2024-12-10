@@ -15,6 +15,7 @@ data class Job(
     val jobType: String = "",
     val requirements: String = "",
     val postedOn: String = "",
+    val postedBy: String = "",
     val status: String = ""
 ) : Parcelable {
     // No-argument constructor for Firebase

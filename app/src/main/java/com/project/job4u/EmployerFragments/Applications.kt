@@ -5,6 +5,17 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.project.job4u.Adapter.CompanyApplicationsAdapter
+import com.project.job4u.Application
 import com.project.job4u.R
 
 // TODO: Rename parameter arguments, choose names that match
@@ -18,6 +29,14 @@ private const val ARG_PARAM2 = "param2"
  * create an instance of this fragment.
  */
 class Applications : Fragment() {
+
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: CompanyApplicationsAdapter
+    private lateinit var database: DatabaseReference
+    private lateinit var companyId: String
+    private val applicationList = mutableListOf<Application>()
+
+
     // TODO: Rename and change types of parameters
     private var param1: String? = null
     private var param2: String? = null
@@ -35,9 +54,43 @@ class Applications : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_applications2, container, false)
-    }
+        val view =  inflater.inflate(R.layout.fragment_applications2, container, false)
+        recyclerView = view.findViewById(R.id.recyclerViewCompanyApplications)
+        recyclerView.layoutManager = LinearLayoutManager(context)
 
+        // Initialize adapter
+        adapter = CompanyApplicationsAdapter(applicationList)
+        recyclerView.adapter = adapter
+
+        database = FirebaseDatabase.getInstance().reference
+        companyId = FirebaseAuth.getInstance().currentUser?.uid ?: return null
+
+        fetchApplications()
+        return view
+    }
+    private fun fetchApplications() {
+        val applicationsRef = database.child("applications")
+
+        applicationsRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                applicationList.clear()
+                if (snapshot.exists()) {
+                    for (applicantSnapshot in snapshot.children) {
+                        for (jobSnapshot in applicantSnapshot.children) {
+                            val application = jobSnapshot.getValue(Application::class.java)
+                            if (application?.postedBy == companyId) {
+                                applicationList.add(application)
+                            }
+                        }
+                    }
+                    adapter.notifyDataSetChanged()
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {
+                Toast.makeText(context, "Failed to load applications", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
     companion object {
         /**
          * Use this factory method to create a new instance of

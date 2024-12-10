@@ -196,42 +196,58 @@ class ApplicantJobDetails : AppCompatActivity() {
         val dateFormat = SimpleDateFormat("MM-dd-yyyy", Locale.getDefault())
         val currentDate = dateFormat.format(Date())
 
-        // Create an Application object with the necessary job details and status
-        val applicationData = Application(
-            jobId = jobId,
-            jobTitle = job.jobTitle,
-            companyName = job.companyName,
-            location = "${job.city}, ${job.state}",
-            description = job.jobDescription,
-            salary = job.salary,
-            requirements = job.requirements,
-            postedOn = job.postedOn,
-            applicationStatus = "applied", // Initial status is "applied"
-            date = currentDate,
-            userId = userId
-        )
+        // Fetch the user's name and email from the "users" node
+        val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
+        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val firstname = snapshot.child("firstname").getValue(String::class.java) ?: "Unknown"
+                val lastname = snapshot.child("lastname").getValue(String::class.java) ?: "Unknown"
+                val applicantEmail = snapshot.child("email").getValue(String::class.java) ?: "Unknown"
 
-        // Step 1: Add the application to the "applications" node under the userId
-        val applicationRef = FirebaseDatabase.getInstance().getReference("applications")
-            .child(userId) // Add under the user's node
-            .child(jobId)  // Add under the specific jobId node
-        applicationRef.setValue(applicationData)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    // Step 2: Add jobId under the "jobApplied" node in the user's node
-                    val userJobAppliedRef = FirebaseDatabase.getInstance().getReference("users")
-                        .child(userId) // Under the user node
-                        .child("jobApplied") // Inside jobApplied node
-                        .child(jobId) // Add jobId under jobApplied
-                    userJobAppliedRef.setValue(true) // Indicating that the user has applied for this job
-                    val intent = Intent(this, MainActivity::class.java)
-                    startActivity(intent)
-                    Toast.makeText(this, "Application submitted successfully", Toast.LENGTH_SHORT).show()
-                    // Optionally, navigate to another activity or update UI
-                } else {
-                    Toast.makeText(this, "Failed to apply for the job", Toast.LENGTH_SHORT).show()
-                }
+                // Create an Application object with the necessary job details and user information
+                val applicationData = Application(
+                    jobId = jobId,
+                    jobTitle = job.jobTitle,
+                    companyName = job.companyName,
+                    location = "${job.city}, ${job.state}",
+                    description = job.jobDescription,
+                    salary = job.salary,
+                    requirements = job.requirements,
+                    postedOn = job.postedOn,
+                    applicationStatus = "applied", // Initial status is "applied"
+                    date = currentDate,
+                    userId = userId,
+                    postedBy = job.postedBy,
+                    applicantName = firstname+" "+lastname,
+                    applicantEmail = applicantEmail
+                )
+
+                // Step 1: Add the application to the "applications" node under the userId
+                val applicationRef = FirebaseDatabase.getInstance().getReference("applications")
+                    .child(userId) // Add under the user's node
+                    .child(jobId)  // Add under the specific jobId node
+                applicationRef.setValue(applicationData)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            // Step 2: Add jobId under the "jobApplied" node in the user's node
+                            val userJobAppliedRef = FirebaseDatabase.getInstance().getReference("users")
+                                .child(userId) // Under the user node
+                                .child("jobApplied") // Inside jobApplied node
+                                .child(jobId) // Add jobId under jobApplied
+                            userJobAppliedRef.setValue(true) // Indicating that the user has applied for this job
+                            val intent = Intent(this@ApplicantJobDetails, MainActivity::class.java)
+                            startActivity(intent)
+                            Toast.makeText(this@ApplicantJobDetails, "Application submitted successfully", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@ApplicantJobDetails, "Failed to apply for the job", Toast.LENGTH_SHORT).show()
+                        }
+                    }
             }
+
+            override fun onCancelled(error: DatabaseError) {
+                Toast.makeText(this@ApplicantJobDetails, "Failed to retrieve user details", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     private fun saveJob(job: Job?) {
