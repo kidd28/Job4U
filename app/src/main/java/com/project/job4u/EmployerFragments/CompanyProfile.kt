@@ -1,5 +1,8 @@
 package com.project.job4u.EmployerFragments
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -13,6 +16,8 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.storage.FirebaseStorage
+import com.project.job4u.MainActivity
 import com.project.job4u.R
 import de.hdodenhof.circleimageview.CircleImageView
 
@@ -37,7 +42,8 @@ class CompanyProfile : Fragment() {
     private lateinit var businessTypeTextView: TextView
     private lateinit var companyDescriptionTextView: TextView
     private lateinit var companySizeTextView: TextView
-
+    private var imageUri: Uri? = null
+    private val PICK_IMAGE_REQUEST = 71
     // TODO: Rename and change types of parameters
     private var param1: String? = null
     private var param2: String? = null
@@ -67,7 +73,9 @@ class CompanyProfile : Fragment() {
         companySizeTextView = view.findViewById(R.id.company_size_text_view)
 
         loadCompanyProfile()
-
+        companyImage.setOnClickListener{
+            openImagePicker()
+        }
         return view
     }
     private fun loadCompanyProfile() {
@@ -118,6 +126,68 @@ class CompanyProfile : Fragment() {
             }
         })
     }
+
+    // Open image picker to choose a picture
+    private fun openImagePicker() {
+        val intent = Intent()
+        intent.type = "image/*"
+        intent.action = Intent.ACTION_GET_CONTENT
+        startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE_REQUEST)
+    }
+
+    // Handle the result of image picker
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null && data.data != null) {
+            imageUri = data.data
+            Glide.with(this@CompanyProfile)
+                .load(imageUri)
+                .placeholder(R.drawable.ic_profile)
+                .error(R.drawable.ic_profile)
+                .into(companyImage)// Preview the selected image
+            uploadImageToFirebase()
+        }
+    }
+
+    // Upload image to Firebase Storage
+    private fun uploadImageToFirebase() {
+        if (imageUri != null) {
+            val storageRef = FirebaseStorage.getInstance().reference
+            val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+            val profileImageRef = storageRef.child("users/$currentUserId/profile.jpg")
+
+            profileImageRef.putFile(imageUri!!)
+                .addOnSuccessListener {
+                    // Get the download URL and save it to Firebase Database
+                    profileImageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                        saveImageLinkToDatabase(downloadUrl.toString())
+                    }
+                }
+                .addOnFailureListener { exception ->
+                    Toast.makeText(requireContext(), "Failed to upload image: ${exception.message}", Toast.LENGTH_SHORT).show()
+                }
+        } else {
+            Toast.makeText(requireContext(), "No image selected", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Save image URL in Firebase Database
+    private fun saveImageLinkToDatabase(imageUrl: String) {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val databaseRef = FirebaseDatabase.getInstance().getReference("companies/$currentUserId")
+
+        databaseRef.child("companyImage").setValue(imageUrl)
+            .addOnSuccessListener {
+                Toast.makeText(requireContext(), "Profile picture updated successfully", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(requireContext(), MainActivity::class.java))
+            }
+            .addOnFailureListener { exception ->
+                Toast.makeText(requireContext(), "Failed to save image link: ${exception.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
     companion object {
         /**
          * Use this factory method to create a new instance of

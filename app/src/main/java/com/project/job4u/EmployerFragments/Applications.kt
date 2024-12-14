@@ -1,5 +1,6 @@
 package com.project.job4u.EmployerFragments
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -15,7 +16,9 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.project.job4u.Adapter.CompanyApplicationsAdapter
+import com.project.job4u.ApplicantDetailsActivity
 import com.project.job4u.Application
+import com.project.job4u.JobDetailsActivity
 import com.project.job4u.R
 
 // TODO: Rename parameter arguments, choose names that match
@@ -59,7 +62,15 @@ class Applications : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(context)
 
         // Initialize adapter
-        adapter = CompanyApplicationsAdapter(applicationList)
+        adapter = CompanyApplicationsAdapter(applicationList,
+            onApplicantClick = {
+                application ->
+                // Navigate to the JobDetailsActivity when job item is clicked
+                val intent = Intent(requireContext(), ApplicantDetailsActivity::class.java)
+                intent.putExtra("applicantDetails", application) // Pass applicant data to the new activity
+
+                startActivity(intent)
+            })
         recyclerView.adapter = adapter
 
         database = FirebaseDatabase.getInstance().reference

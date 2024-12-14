@@ -6,9 +6,12 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.SearchView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -18,6 +21,7 @@ import com.google.firebase.database.ValueEventListener
 import com.project.job4u.Adapter.MyApplicationsAdapter
 import com.project.job4u.ApplicantJobDetails
 import com.project.job4u.Application
+import com.project.job4u.Authentication.SignInActivity
 import com.project.job4u.Job
 import com.project.job4u.R
 
@@ -37,9 +41,9 @@ class ApplicationsFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: MyApplicationsAdapter
     private lateinit var database: DatabaseReference
-    private lateinit var userId: String
+    private lateinit var not_signed_in: LinearLayout
+    private lateinit var sign_in_button: MaterialButton
     private val applicationList = mutableListOf<Application>()
-
     // TODO: Rename and change types of parameters
     private var param1: String? = null
     private var param2: String? = null
@@ -60,7 +64,8 @@ class ApplicationsFragment : Fragment() {
 
         recyclerView = view.findViewById(R.id.recyclerViewJobs)
         recyclerView.layoutManager = LinearLayoutManager(context)
-
+        not_signed_in = view.findViewById(R.id.not_signed_in)
+        sign_in_button = view.findViewById(R.id.sign_in_button)
         // Initialize the adapter with applicationList and the callback for item click
         adapter = MyApplicationsAdapter(applicationList) { application ->
             // Navigate to job details activity
@@ -70,17 +75,33 @@ class ApplicationsFragment : Fragment() {
         }
         recyclerView.adapter = adapter
         database = FirebaseDatabase.getInstance().reference
-        userId = FirebaseAuth.getInstance().currentUser?.uid ?: return null
+
+        sign_in_button.setOnClickListener {
+            val intent = Intent(requireContext(), SignInActivity::class.java)
+            startActivity(intent) }
+
 
         // Fetch the user's applications from Firebase
         fetchMyApplications()
+        sign_in_button.setOnClickListener {
+            val intent = Intent(requireContext(), SignInActivity::class.java)
+            startActivity(intent) }
+
 
         return view
     }
 
     private fun fetchMyApplications() {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val applicationsRef = database.child("applications").child(userId)
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        val applicationsRef = database.child("applications").child(userId.toString())
+        if (userId == null) {
+            recyclerView.visibility = View.GONE
+            not_signed_in.visibility = View.VISIBLE
+        }else{
+            recyclerView.visibility = View.VISIBLE
+            not_signed_in.visibility = View.GONE
+        }
+
 
         // Fetch the list of job IDs the user has applied to
         applicationsRef.addListenerForSingleValueEvent(object : ValueEventListener {

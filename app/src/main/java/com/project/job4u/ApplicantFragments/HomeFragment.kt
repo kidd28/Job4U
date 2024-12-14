@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.SearchView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -37,25 +38,14 @@ class HomeFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var database: DatabaseReference
     private lateinit var auth: FirebaseAuth
-
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-    }
+    private lateinit var jobSearchView:SearchView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        val view =  inflater.inflate(R.layout.fragment_home, container, false)
+        val view = inflater.inflate(R.layout.fragment_home, container, false)
+        jobSearchView = view.findViewById(R.id.job_search_view)
 
         // Initialize Firebase
         auth = FirebaseAuth.getInstance()
@@ -72,59 +62,56 @@ class HomeFragment : Fragment() {
             onJobClick = { job ->
                 // Navigate to the JobDetailsActivity when job item is clicked
                 val intent = Intent(requireContext(), ApplicantJobDetails::class.java)
-                intent.putExtra("jobDetails", job) // Pass job data to the new activity
+                intent.putExtra("jobDetails", job)
                 startActivity(intent)
             })
         recyclerView.adapter = jobAdapter
 
-        // Fetch the jobs from the Firebase database
+        // Fetch the jobs from Firebase
         fetchApplicantJobs()
 
+        // Set up SearchView listener
+        jobSearchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                query?.let { searchJobs(it) }
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                newText?.let { searchJobs(it) }
+                return true
+            }
+        })
 
         return view
     }
-    private fun fetchApplicantJobs() {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val jobAppliedRef = FirebaseDatabase.getInstance()
-            .getReference("applications")
-            .child(userId)
 
-        // First, fetch all jobs from the database with active status
-        database.orderByChild("status")
-            .equalTo("active")
+    private fun fetchApplicantJobs() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        // Fetch all jobs with active status
+        database.orderByChild("status").equalTo("active")
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val tempJobList = mutableListOf<Job>()
-                    val jobIdsToHide = mutableSetOf<String>()
+
                     for (jobSnapshot in snapshot.children) {
                         val job = jobSnapshot.getValue(Job::class.java)
                         if (job != null) {
                             tempJobList.add(job)
                         }
                     }
+                    if (userId == null) {
+                        // No user is signed in, show all jobs
+                        jobList.clear()
+                        jobList.addAll(tempJobList)
 
-                    // Now, fetch the user's jobApplied list to filter the job posts
-                    jobAppliedRef.addListenerForSingleValueEvent(object : ValueEventListener {
-                        override fun onDataChange(appliedSnapshot: DataSnapshot) {
-                            if (appliedSnapshot.exists()) {
-                                for (appliedJobSnapshot in appliedSnapshot.children) {
-                                    appliedJobSnapshot.key?.let { jobIdsToHide.add(it) }
-                                }
-                            }
-                            // Filter out jobs the user has already applied for
-                            jobList.clear()
-                            jobList.addAll(tempJobList.filter { it.jobId !in jobIdsToHide })
-
-                            // Sort the job list by postedOn date in ascending order
-                            jobList.sortByDescending { it.postedOn }
-                            // Notify adapter of the updated data
-                            jobAdapter.notifyDataSetChanged()
-                        }
-
-                        override fun onCancelled(error: DatabaseError) {
-                            Log.e("FirebaseError", "Failed to load applied jobs: ${error.message}")
-                        }
-                    })
+                        // Sort by postedOn date in descending order
+                        jobList.sortByDescending { it.postedOn }
+                        jobAdapter.notifyDataSetChanged()
+                    } else {
+                        // User is signed in, filter jobs
+                        filterJobsForUser(userId, tempJobList)
+                    }
                 }
 
                 override fun onCancelled(error: DatabaseError) {
@@ -133,8 +120,85 @@ class HomeFragment : Fragment() {
             })
     }
 
+    private fun filterJobsForUser(userId: String, tempJobList: List<Job>) {
+        val jobAppliedRef = FirebaseDatabase.getInstance()
+            .getReference("applications")
+            .child(userId)
 
+        val savedJobsRef = FirebaseDatabase.getInstance()
+            .getReference("users")
+            .child(userId)
+            .child("savedJobs")
 
+        val jobIdsToHide = mutableSetOf<String>()
+
+        // Fetch the jobs the user has applied for
+        jobAppliedRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(appliedSnapshot: DataSnapshot) {
+                if (appliedSnapshot.exists()) {
+                    for (appliedJobSnapshot in appliedSnapshot.children) {
+                        appliedJobSnapshot.key?.let { jobIdsToHide.add(it) }
+                    }
+                }
+
+                // Fetch the jobs the user has saved
+                savedJobsRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(savedSnapshot: DataSnapshot) {
+                        if (savedSnapshot.exists()) {
+                            for (savedJobSnapshot in savedSnapshot.children) {
+                                savedJobSnapshot.key?.let { jobIdsToHide.add(it) }
+                            }
+                        }
+
+                        // Filter jobs to exclude those the user has applied for or saved
+                        jobList.clear()
+                        jobList.addAll(tempJobList.filter { it.jobId !in jobIdsToHide })
+
+                        // Sort by postedOn date in descending order
+                        jobList.sortByDescending { it.postedOn }
+                        jobAdapter.notifyDataSetChanged()
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {
+                        Log.e("FirebaseError", "Failed to load saved jobs: ${error.message}")
+                    }
+                })
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("FirebaseError", "Failed to load applied jobs: ${error.message}")
+            }
+        })
+    }
+
+    private fun searchJobs(jobTitle: String) {
+        val jobRef = FirebaseDatabase.getInstance().getReference("jobPosts")
+        jobRef.orderByChild("jobTitle")
+            .startAt(jobTitle.lowercase())
+            .endAt(jobTitle.lowercase() + "\uf8ff")
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val tempJobList = mutableListOf<Job>()
+                    for (jobSnapshot in snapshot.children) {
+                        val job = jobSnapshot.getValue(Job::class.java)
+                        if (job != null) {
+                            tempJobList.add(job)
+                        }
+                    }
+                    // Update job list with search results
+                    jobList.clear()
+                    jobList.addAll(tempJobList)
+
+                    // Sort by postedOn date in descending order
+                    jobList.sortByDescending { it.postedOn }
+                    jobAdapter.notifyDataSetChanged()
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("FirebaseError", "Error searching jobs: ${error.message}")
+                }
+            })
+    }
     companion object {
         /**
          * Use this factory method to create a new instance of

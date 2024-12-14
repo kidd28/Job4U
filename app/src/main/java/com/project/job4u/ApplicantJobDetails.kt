@@ -18,6 +18,7 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.project.job4u.Authentication.EmployerSignUp
+import com.project.job4u.Authentication.SignInActivity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,6 +41,7 @@ class ApplicantJobDetails : AppCompatActivity() {
     private lateinit var withdrawButton: MaterialButton
     private lateinit var applyButton: MaterialButton
     private lateinit var saveButton: MaterialButton
+    private lateinit var sign_in: MaterialButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,7 +80,6 @@ class ApplicantJobDetails : AppCompatActivity() {
             jobTypeText.text = job.jobType
             requirementsText.text = job.requirements
             postedOnText.text = job.postedOn
-
             jobId = job.jobId
             status = job.status
         }
@@ -100,6 +101,22 @@ class ApplicantJobDetails : AppCompatActivity() {
         withdrawButton = findViewById(R.id.withdraw_button)
         applyButton = findViewById(R.id.apply_button)
         saveButton = findViewById(R.id.save_button)
+        sign_in = findViewById(R.id.sign_in)
+
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+        if (userId == null) {
+            withdrawButton.visibility = View.GONE
+            applyButton.visibility = View.GONE
+            saveButton.visibility = View.GONE
+            sign_in.visibility = View.VISIBLE
+        }else{
+            withdrawButton.visibility = View.VISIBLE
+            applyButton.visibility = View.VISIBLE
+            saveButton.visibility = View.VISIBLE
+            sign_in.visibility = View.GONE
+        }
+
 
         // Check if the applicant has already applied or saved this job
         checkJobStatus()
@@ -123,6 +140,9 @@ class ApplicantJobDetails : AppCompatActivity() {
                 saveJob(applicationDetails)
             }
         }
+        sign_in.setOnClickListener {
+            val intent = Intent(this, SignInActivity::class.java)
+            startActivity(intent) }
     }
 
     private fun checkJobStatus() {
@@ -203,6 +223,8 @@ class ApplicantJobDetails : AppCompatActivity() {
                 val firstname = snapshot.child("firstname").getValue(String::class.java) ?: "Unknown"
                 val lastname = snapshot.child("lastname").getValue(String::class.java) ?: "Unknown"
                 val applicantEmail = snapshot.child("email").getValue(String::class.java) ?: "Unknown"
+                val applicantResume = snapshot.child("resume").getValue(String::class.java) ?: "Unknown"
+                val applicantPhone = snapshot.child("phone").getValue(String::class.java) ?: "Unknown"
 
                 // Create an Application object with the necessary job details and user information
                 val applicationData = Application(
@@ -219,7 +241,9 @@ class ApplicantJobDetails : AppCompatActivity() {
                     userId = userId,
                     postedBy = job.postedBy,
                     applicantName = firstname+" "+lastname,
-                    applicantEmail = applicantEmail
+                    applicantEmail = applicantEmail,
+                    applicantResume = applicantResume,
+                    applicantPhone = applicantPhone
                 )
 
                 // Step 1: Add the application to the "applications" node under the userId
@@ -282,6 +306,8 @@ class ApplicantJobDetails : AppCompatActivity() {
                 }
             }
     }
+
+
     private fun saveJob(application: Application?) {
         val userId = auth.currentUser?.uid ?: return
         val jobId = application?.jobId ?: return

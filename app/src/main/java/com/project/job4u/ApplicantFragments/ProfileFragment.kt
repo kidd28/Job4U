@@ -1,6 +1,8 @@
 package com.project.job4u.ApplicantFragments
 
+import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -17,8 +19,11 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.storage.FirebaseStorage
+import com.project.job4u.Authentication.ApplicantContact
 import com.project.job4u.Authentication.EmployerSignUp
 import com.project.job4u.Authentication.SignInActivity
+import com.project.job4u.MainActivity
 import com.project.job4u.R
 import de.hdodenhof.circleimageview.CircleImageView
 
@@ -45,7 +50,8 @@ class ProfileFragment : Fragment() {
     private lateinit var signed_in: CardView
     private lateinit var not_signedin: LinearLayout
     private lateinit var sign_in_button: MaterialButton
-
+    private var imageUri: Uri? = null
+    private val PICK_IMAGE_REQUEST = 71
 
 
     // TODO: Rename and change types of parameters
@@ -84,6 +90,10 @@ class ProfileFragment : Fragment() {
         sign_in_button.setOnClickListener {
             val intent = Intent(requireContext(), SignInActivity::class.java)
             startActivity(intent) }
+
+        profileImage.setOnClickListener{
+            openImagePicker()
+        }
         loadUserProfile()
         return view
     }
@@ -91,7 +101,6 @@ class ProfileFragment : Fragment() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
 
         if (userId == null) {
-            Toast.makeText(context, "User not signed in", Toast.LENGTH_SHORT).show()
             signed_in.visibility = View.GONE
             not_signedin.visibility = View.VISIBLE
             return
@@ -137,6 +146,68 @@ class ProfileFragment : Fragment() {
             }
         })
     }
+
+    // Open image picker to choose a picture
+    private fun openImagePicker() {
+        val intent = Intent()
+        intent.type = "image/*"
+        intent.action = Intent.ACTION_GET_CONTENT
+        startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE_REQUEST)
+    }
+
+    // Handle the result of image picker
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null && data.data != null) {
+            imageUri = data.data
+            Glide.with(this@ProfileFragment)
+                .load(imageUri)
+                .placeholder(R.drawable.ic_profile)
+                .error(R.drawable.ic_profile)
+                .into(profileImage)// Preview the selected image
+            uploadImageToFirebase()
+        }
+    }
+
+    // Upload image to Firebase Storage
+    private fun uploadImageToFirebase() {
+        if (imageUri != null) {
+            val storageRef = FirebaseStorage.getInstance().reference
+            val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+            val profileImageRef = storageRef.child("users/$currentUserId/profile.jpg")
+
+            profileImageRef.putFile(imageUri!!)
+                .addOnSuccessListener {
+                    // Get the download URL and save it to Firebase Database
+                    profileImageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                        saveImageLinkToDatabase(downloadUrl.toString())
+                    }
+                }
+                .addOnFailureListener { exception ->
+                    Toast.makeText(requireContext(), "Failed to upload image: ${exception.message}", Toast.LENGTH_SHORT).show()
+                }
+        } else {
+            Toast.makeText(requireContext(), "No image selected", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Save image URL in Firebase Database
+    private fun saveImageLinkToDatabase(imageUrl: String) {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val databaseRef = FirebaseDatabase.getInstance().getReference("users/$currentUserId")
+
+        databaseRef.child("profileImage").setValue(imageUrl)
+            .addOnSuccessListener {
+                Toast.makeText(requireContext(), "Profile picture updated successfully", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(requireContext(), MainActivity::class.java))
+            }
+            .addOnFailureListener { exception ->
+                Toast.makeText(requireContext(), "Failed to save image link: ${exception.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
     companion object {
         /**
          * Use this factory method to create a new instance of

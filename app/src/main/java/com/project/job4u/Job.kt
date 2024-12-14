@@ -19,5 +19,5 @@ data class Job(
     val status: String = ""
 ) : Parcelable {
     // No-argument constructor for Firebase
-    constructor() : this("", "", "", "", "","", "", "", "","","")
+    constructor() : this("","","","", "", "", "", "","", "", "", "")
 }

@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.SearchView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -35,8 +36,8 @@ class JobPosted : Fragment() {
     private lateinit var auth: FirebaseAuth
     private lateinit var jobAdapter: JobAdapter
     private lateinit var jobList: MutableList<Job>
+    private lateinit var jobSearchView: SearchView
 
-    // TODO: Rename and change types of parameters
     private var param1: String? = null
     private var param2: String? = null
 
@@ -55,52 +56,81 @@ class JobPosted : Fragment() {
         // Inflate the layout for this fragment
         val view = inflater.inflate(R.layout.fragment_job_posted, container, false)
 
+        // Initialize the SearchView
+        jobSearchView = view.findViewById(R.id.job_search_view)
+        jobSearchView.setQuery("", false)
+
+        // Initialize RecyclerView and adapter
         val recyclerView: RecyclerView = view.findViewById(R.id.recyclerViewJobs)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        // Initialize the job list and adapter
-        jobList = mutableListOf() // Fetch this list from Firebase
+
+        jobList = mutableListOf() // List to hold job posts
         jobAdapter = JobAdapter(jobList,
             onSaveJobClick = { job ->
-                // Handle saving the job to favorites
-
+                // Handle saving the job to favorites (you can implement this logic)
             },
             onJobClick = { job ->
-                // Navigate to the JobDetailsActivity when job item is clicked
+                // Navigate to JobDetailsActivity when job item is clicked
                 val intent = Intent(requireContext(), JobDetailsActivity::class.java)
-                intent.putExtra("jobDetails", job) // Pass job data to the new activity
-
+                intent.putExtra("jobDetails", job) // Pass job data
                 startActivity(intent)
             })
         recyclerView.adapter = jobAdapter
 
+        // Initialize Firebase
         auth = FirebaseAuth.getInstance()
         database = FirebaseDatabase.getInstance().getReference("jobPosts")
 
+        // Fetch the jobs posted by the company
         fetchCompanyJobs()
+
+        // Add listener to the SearchView for real-time search functionality
+        jobSearchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                query?.let { fetchCompanyJobs(it) } // Submit the search query and filter jobs
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                newText?.let { fetchCompanyJobs(it) } // Update the list as the user types
+                return true
+            }
+        })
 
         return view
     }
-    private fun fetchCompanyJobs() {
+
+    private fun fetchCompanyJobs(searchQuery: String = "") {
         val companyId = auth.currentUser?.uid ?: return  // Ensure the user is logged in
 
         // Query Firebase to fetch jobs posted by the current company (where postedBy == companyId)
-        // and order them by postedOn (ascending)
         database.orderByChild("postedBy")
             .equalTo(companyId)
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    jobList.clear()  // Clear existing list
+                    jobList.clear()  // Clear existing job list
 
                     // Loop through each job post in Firebase and add it to the list
                     for (jobSnapshot in snapshot.children) {
                         val job = jobSnapshot.getValue(Job::class.java)
-                        job?.let { jobList.add(it) }
+                        job?.let {
+                            jobList.add(it)
+                        }
                     }
 
-                    // Sort the job list by postedOn date in ascending order
+                    // Filter job list based on the search query (case-insensitive)
+                    if (searchQuery.isNotEmpty()) {
+                        val filteredJobList = jobList.filter { job ->
+                            job.jobTitle.lowercase().contains(searchQuery.lowercase())  // Case-insensitive comparison
+                        }
+                        jobList.clear()
+                        jobList.addAll(filteredJobList)
+                    }
+
+                    // Sort the job list by jobId or postedOn in descending order
                     jobList.sortByDescending { it.jobId }
 
-                    // Notify adapter that data has changed
+                    // Notify the adapter that data has changed
                     jobAdapter.notifyDataSetChanged()
                 }
 

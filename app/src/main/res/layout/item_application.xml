@@ -32,5 +32,13 @@
             android:layout_height="wrap_content"
             android:text="Applicant Email"
             android:paddingTop="4dp"/>
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="italic"
+            android:text="Status"
+            android:paddingTop="4dp"/>
+
     </LinearLayout>
 </androidx.cardview.widget.CardView>

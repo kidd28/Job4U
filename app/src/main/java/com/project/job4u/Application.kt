@@ -19,9 +19,11 @@ data class Application(
     val userId: String = "",
     val postedBy: String = "",
     val applicantName : String = "",
-    val applicantEmail : String = ""
+    val applicantEmail : String = "",
+    val applicantResume : String = "",
+    val applicantPhone : String = "",
 
 ) : Parcelable{
     // No-argument constructor for Firebase
-    constructor() : this("","","","", "", "", "", "","", "", "", "","","")
+    constructor() : this("","","","","","", "", "", "", "","", "", "", "","","")
 }

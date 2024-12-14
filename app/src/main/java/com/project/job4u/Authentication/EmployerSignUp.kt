@@ -125,6 +125,7 @@ class EmployerSignUp : AppCompatActivity() {
                     }
                 } else {
                     Toast.makeText(this, "Authentication failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+              System.out.println(task.exception?.message)
                 }
             }
     }

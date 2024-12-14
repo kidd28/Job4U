@@ -6,9 +6,11 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -19,6 +21,7 @@ import com.project.job4u.Adapter.MyApplicationsAdapter
 import com.project.job4u.Adapter.SavedAdapter
 import com.project.job4u.ApplicantJobDetails
 import com.project.job4u.Application
+import com.project.job4u.Authentication.SignInActivity
 import com.project.job4u.R
 
 // TODO: Rename parameter arguments, choose names that match
@@ -31,13 +34,14 @@ private const val ARG_PARAM2 = "param2"
  * Use the [SavedFragment.newInstance] factory method to
  * create an instance of this fragment.
  */
+
 class SavedFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: SavedAdapter
     private lateinit var database: DatabaseReference
-    private lateinit var userId: String
     private val savedJobsList = mutableListOf<Application>()
-
+    private lateinit var not_signed_in: LinearLayout
+    private lateinit var sign_in_button: MaterialButton
     // TODO: Rename and change types of parameters
     private var param1: String? = null
     private var param2: String? = null
@@ -58,7 +62,8 @@ class SavedFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_saved, container, false)
         recyclerView = view.findViewById(R.id.recyclerViewApplicantJobs)
         recyclerView.layoutManager = LinearLayoutManager(context)
-
+        not_signed_in = view.findViewById(R.id.not_signed_in)
+        sign_in_button = view.findViewById(R.id.sign_in_button)
         // Initialize the SavedAdapter with savedJobsList and job item click handler
         adapter = SavedAdapter(savedJobsList) { savedJob ->
             // Navigate to job details activity
@@ -69,15 +74,26 @@ class SavedFragment : Fragment() {
 
         recyclerView.adapter = adapter
         database = FirebaseDatabase.getInstance().reference
-        userId = FirebaseAuth.getInstance().currentUser?.uid ?: return null
 
         fetchSavedJobs()
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId == null) {
+            recyclerView.visibility = View.GONE
+            not_signed_in.visibility = View.VISIBLE
+        }else{
+            recyclerView.visibility = View.VISIBLE
+            not_signed_in.visibility = View.GONE
+        }
 
+        sign_in_button.setOnClickListener {
+            val intent = Intent(requireContext(), SignInActivity::class.java)
+            startActivity(intent) }
         return view
     }
 
     private fun fetchSavedJobs() {
-        val savedJobsRef = database.child("savedJobs").child(userId)
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        val savedJobsRef = database.child("savedJobs").child(userId.toString())
 
         savedJobsRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
