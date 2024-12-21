@@ -36,7 +36,7 @@
                 android:id="@+id/profile_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="John Doe"
+                android:text=""
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:textColor="@color/black"
@@ -48,7 +48,7 @@
                 android:id="@+id/profile_email"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Email: johndoe@example.com"
+                android:text=""
                 android:textSize="16sp"
                 android:textColor="@color/black"
                 android:layout_gravity="center_horizontal"
@@ -66,7 +66,7 @@
                     android:id="@+id/profile_gender"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Gender: Male"
+                    android:text=""
                     android:textSize="16sp"
                     android:textColor="@color/black"
                     android:layout_marginBottom="8dp" />
@@ -76,7 +76,7 @@
                     android:id="@+id/profile_phone"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Phone: +1234567890"
+                    android:text=""
                     android:textSize="16sp"
                     android:textColor="@color/black"
                     android:layout_marginBottom="8dp" />
@@ -86,7 +86,7 @@
                     android:id="@+id/profile_dob"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Date of Birth: 01/01/2000"
+                    android:text=""
                     android:textSize="16sp"
                     android:textColor="@color/black"
                     android:layout_marginBottom="8dp" />
@@ -96,7 +96,7 @@
                     android:id="@+id/profile_address"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Address: 123 Street, City, State, Country"
+                    android:text=""
                     android:textSize="16sp"
                     android:textColor="@color/black"
                     android:layout_marginBottom="8dp" />
@@ -106,7 +106,7 @@
                     android:id="@+id/profile_resume"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Resume: my_resume.pdf"
+                    android:text=""
                     android:textSize="16sp"
                     android:textColor="@color/black"
                     android:layout_marginBottom="8dp" />

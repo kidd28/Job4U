@@ -11,16 +11,11 @@ import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.firestore.FirebaseFirestore
 import com.project.job4u.JobDetailsActivity
 import com.project.job4u.Adapter.JobAdapter
 import com.project.job4u.R
 import com.project.job4u.Job
-
 // TODO: Rename parameter arguments, choose names that match
 // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
 private const val ARG_PARAM1 = "param1"
@@ -32,7 +27,7 @@ private const val ARG_PARAM2 = "param2"
  * create an instance of this fragment.
  */
 class JobPosted : Fragment() {
-    private lateinit var database: DatabaseReference
+    private lateinit var db: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
     private lateinit var jobAdapter: JobAdapter
     private lateinit var jobList: MutableList<Job>
@@ -53,7 +48,6 @@ class JobPosted : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
         val view = inflater.inflate(R.layout.fragment_job_posted, container, false)
 
         // Initialize the SearchView
@@ -79,7 +73,7 @@ class JobPosted : Fragment() {
 
         // Initialize Firebase
         auth = FirebaseAuth.getInstance()
-        database = FirebaseDatabase.getInstance().getReference("jobPosts")
+        db = FirebaseFirestore.getInstance()
 
         // Fetch the jobs posted by the company
         fetchCompanyJobs()
@@ -103,52 +97,42 @@ class JobPosted : Fragment() {
     private fun fetchCompanyJobs(searchQuery: String = "") {
         val companyId = auth.currentUser?.uid ?: return  // Ensure the user is logged in
 
-        // Query Firebase to fetch jobs posted by the current company (where postedBy == companyId)
-        database.orderByChild("postedBy")
-            .equalTo(companyId)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    jobList.clear()  // Clear existing job list
+        // Query Firestore to fetch jobs posted by the current company (where postedBy == companyId)
+        db.collection("jobPosts")
+            .whereEqualTo("postedBy", companyId)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                jobList.clear()  // Clear existing job list
 
-                    // Loop through each job post in Firebase and add it to the list
-                    for (jobSnapshot in snapshot.children) {
-                        val job = jobSnapshot.getValue(Job::class.java)
-                        job?.let {
-                            jobList.add(it)
-                        }
+                // Loop through each job post in Firestore and add it to the list
+                for (jobSnapshot in snapshot) {
+                    val job = jobSnapshot.toObject(Job::class.java)
+                    job?.let {
+                        jobList.add(it)
                     }
-
-                    // Filter job list based on the search query (case-insensitive)
-                    if (searchQuery.isNotEmpty()) {
-                        val filteredJobList = jobList.filter { job ->
-                            job.jobTitle.lowercase().contains(searchQuery.lowercase())  // Case-insensitive comparison
-                        }
-                        jobList.clear()
-                        jobList.addAll(filteredJobList)
-                    }
-
-                    // Sort the job list by jobId or postedOn in descending order
-                    jobList.sortByDescending { it.jobId }
-
-                    // Notify the adapter that data has changed
-                    jobAdapter.notifyDataSetChanged()
                 }
 
-                override fun onCancelled(error: DatabaseError) {
-                    Toast.makeText(context, "Failed to fetch jobs: ${error.message}", Toast.LENGTH_SHORT).show()
+                // Filter job list based on the search query (case-insensitive)
+                if (searchQuery.isNotEmpty()) {
+                    val filteredJobList = jobList.filter { job ->
+                        job.jobTitle.lowercase().contains(searchQuery.lowercase())  // Case-insensitive comparison
+                    }
+                    jobList.clear()
+                    jobList.addAll(filteredJobList)
                 }
-            })
+
+                // Sort the job list by jobId or postedOn in descending order
+                jobList.sortByDescending { it.jobId }
+
+                // Notify the adapter that data has changed
+                jobAdapter.notifyDataSetChanged()
+            }
+            .addOnFailureListener {
+                Toast.makeText(context, "Failed to fetch jobs", Toast.LENGTH_SHORT).show()
+            }
     }
+
     companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment JobPosted.
-         */
-        // TODO: Rename and change types and number of parameters
         @JvmStatic
         fun newInstance(param1: String, param2: String) =
             JobPosted().apply {

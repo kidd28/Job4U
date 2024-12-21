@@ -1,33 +1,24 @@
 package com.project.job4u.Authentication
 
-import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.OpenableColumns
 import android.view.View
-import android.widget.RadioGroup
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.radiobutton.MaterialRadioButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.storage.FirebaseStorage
-import com.project.job4u.MainActivity
+import com.google.firebase.firestore.FirebaseFirestore
 import com.project.job4u.R
 import java.util.Calendar
-import java.util.UUID
 
 class ApplicantInfo : AppCompatActivity() {
-    private lateinit var database: DatabaseReference
+
+    private lateinit var firestore: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
 
     // Input fields
@@ -36,12 +27,10 @@ class ApplicantInfo : AppCompatActivity() {
     private lateinit var emailInput: TextInputEditText
     private lateinit var dobInput: TextInputEditText
 
-
     private lateinit var calendar: Calendar
     private lateinit var datePickerDialog: DatePickerDialog
 
     private lateinit var submitButton: MaterialButton
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,7 +42,8 @@ class ApplicantInfo : AppCompatActivity() {
             insets
         }
 
-        // Initialize Firebase Auth
+        // Initialize Firestore and Firebase Auth
+        firestore = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
 
         // Initialize UI elements
@@ -63,7 +53,6 @@ class ApplicantInfo : AppCompatActivity() {
         dobInput = findViewById(R.id.dob_input)
 
         submitButton = findViewById(R.id.Save)
-
 
         // Set submit button click listener
         submitButton.setOnClickListener {
@@ -76,7 +65,7 @@ class ApplicantInfo : AppCompatActivity() {
         calendar = Calendar.getInstance()
         datePickerDialog = DatePickerDialog(
             this,
-            { view, year, month, dayOfMonth ->
+            { _, year, month, dayOfMonth ->
                 val selectedDate = "$dayOfMonth/${month + 1}/$year"
                 dobInput.setText(selectedDate)
             },
@@ -87,25 +76,23 @@ class ApplicantInfo : AppCompatActivity() {
 
         // Set a click listener on the Date of Birth input field
         dobInput.setOnClickListener {
-            // Show the DatePickerDialog when the user clicks the field
             datePickerDialog.show()
         }
 
         auth.currentUser?.let {
             emailInput.setText(it.email)
         }
-
-
     }
+
     private fun validateInputs(): Boolean {
         // Check if the fields are empty
         return when {
             fnameInput.text.isNullOrEmpty() -> {
-                showToast("Name is required")
+                showToast("First name is required")
                 false
             }
             lnameInput.text.isNullOrEmpty() -> {
-                showToast("Name is required")
+                showToast("Last name is required")
                 false
             }
             emailInput.text.isNullOrEmpty() -> {
@@ -119,16 +106,17 @@ class ApplicantInfo : AppCompatActivity() {
             else -> true
         }
     }
+
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
+
     private fun uploadUserData() {
         // Get user data from the input fields
         val fname = fnameInput.text.toString()
         val lname = lnameInput.text.toString()
         val email = emailInput.text.toString()
         val dob = dobInput.text.toString()
-
 
         // Prepare the data to upload
         val userData = mapOf(
@@ -141,12 +129,8 @@ class ApplicantInfo : AppCompatActivity() {
         // Get the current user from Firebase Authentication
         val userId = auth.currentUser?.uid ?: return showToast("User is not signed in")
 
-        // Reference to the Firebase Database location
-        database = FirebaseDatabase.getInstance().reference
-        val userRef = database.child("users").child(userId)
-
-        // Upload user data to Firebase
-        userRef.updateChildren(userData)
+        // Upload user data to Firestore in the "users" collection
+        firestore.collection("users").document(userId).set(userData)
             .addOnSuccessListener {
                 startActivity(Intent(this, ApplicantContact::class.java))
             }
@@ -154,6 +138,4 @@ class ApplicantInfo : AppCompatActivity() {
                 showToast("Failed: ${it.message}")
             }
     }
-
-
 }

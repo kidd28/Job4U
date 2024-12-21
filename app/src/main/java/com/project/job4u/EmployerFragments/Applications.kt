@@ -2,6 +2,7 @@ package com.project.job4u.EmployerFragments
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -15,6 +16,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.firestore.FirebaseFirestore
 import com.project.job4u.Adapter.CompanyApplicationsAdapter
 import com.project.job4u.ApplicantDetailsActivity
 import com.project.job4u.Application
@@ -35,7 +37,7 @@ class Applications : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: CompanyApplicationsAdapter
-    private lateinit var database: DatabaseReference
+    private lateinit var firestore: FirebaseFirestore
     private lateinit var companyId: String
     private val applicationList = mutableListOf<Application>()
 
@@ -57,51 +59,73 @@ class Applications : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        val view =  inflater.inflate(R.layout.fragment_applications2, container, false)
+        val view = inflater.inflate(R.layout.fragment_applications2, container, false)
         recyclerView = view.findViewById(R.id.recyclerViewCompanyApplications)
         recyclerView.layoutManager = LinearLayoutManager(context)
 
         // Initialize adapter
         adapter = CompanyApplicationsAdapter(applicationList,
-            onApplicantClick = {
-                application ->
-                // Navigate to the JobDetailsActivity when job item is clicked
+            onApplicantClick = { application ->
+                // Navigate to the ApplicantDetailsActivity when an applicant is clicked
                 val intent = Intent(requireContext(), ApplicantDetailsActivity::class.java)
                 intent.putExtra("applicantDetails", application) // Pass applicant data to the new activity
-
                 startActivity(intent)
             })
         recyclerView.adapter = adapter
 
-        database = FirebaseDatabase.getInstance().reference
+        firestore = FirebaseFirestore.getInstance()
         companyId = FirebaseAuth.getInstance().currentUser?.uid ?: return null
 
         fetchApplications()
         return view
     }
     private fun fetchApplications() {
-        val applicationsRef = database.child("applications")
+        val companyId = FirebaseAuth.getInstance().currentUser?.uid
+        if (companyId == null) {
+            Toast.makeText(context, "Please sign in to view applications", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        applicationsRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                applicationList.clear()
-                if (snapshot.exists()) {
-                    for (applicantSnapshot in snapshot.children) {
-                        for (jobSnapshot in applicantSnapshot.children) {
-                            val application = jobSnapshot.getValue(Application::class.java)
-                            if (application?.postedBy == companyId) {
-                                applicationList.add(application)
-                            }
-                        }
-                    }
-                    adapter.notifyDataSetChanged()
+        // Reference to the applications collection in Firestore
+        val applicationsRef = firestore.collection("applications")
+
+        // Query for applications where the postedBy matches the companyId (current signed-in user)
+        applicationsRef
+            .whereEqualTo("postedBy", companyId)  // Filter by the companyId (userId of the current signed-in user)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                Log.d("FirestoreDebug", "Applications snapshot size: ${snapshot.size()}")
+
+                if (snapshot.isEmpty) {
+                    Toast.makeText(context, "No applicants found", Toast.LENGTH_SHORT).show()
+                    return@addOnSuccessListener
                 }
+
+                applicationList.clear() // Clear previous data
+
+                // Iterate over the applications
+                for (applicationSnapshot in snapshot.documents) {
+                    val application = applicationSnapshot.toObject(Application::class.java)
+
+                    // Log the application details for debugging
+                    Log.d("FirestoreDebug", "Application details: $application")
+
+                    // Add the application to the list
+                    application?.let {
+                        // Add only the applications with the matching company (postedBy) field
+                        applicationList.add(it)
+                    }
+                }
+
+                // Notify the adapter to update the UI
+                adapter.notifyDataSetChanged()
             }
-            override fun onCancelled(error: DatabaseError) {
+            .addOnFailureListener {
+                Log.e("FirestoreError", "Failed to load applications: ${it.message}")
                 Toast.makeText(context, "Failed to load applications", Toast.LENGTH_SHORT).show()
             }
-        })
     }
+
     companion object {
         /**
          * Use this factory method to create a new instance of

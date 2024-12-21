@@ -10,8 +10,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FirebaseFirestore
 import com.project.job4u.R
 
 class CompanyInfo : AppCompatActivity() {
@@ -22,12 +21,10 @@ class CompanyInfo : AppCompatActivity() {
     private lateinit var companyWebsiteInput: TextInputEditText
     private lateinit var companyDescriptionInput: TextInputEditText
 
-
-    private lateinit var database: FirebaseDatabase
-    private lateinit var companyRef: DatabaseReference
+    private lateinit var firestore: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
-    override fun onCreate(savedInstanceState: Bundle?) {
 
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_company_info)
@@ -37,12 +34,9 @@ class CompanyInfo : AppCompatActivity() {
             insets
         }
 
-        // Initialize Firebase Database and Auth
-        database = FirebaseDatabase.getInstance()
+        // Initialize Firestore and Auth
+        firestore = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
-
-        // Reference to the companies node under the user ID
-        companyRef = database.reference.child("companies")
 
         // Initialize text fields
         companyNameInput = findViewById(R.id.company_name_input)
@@ -54,12 +48,13 @@ class CompanyInfo : AppCompatActivity() {
         auth.currentUser?.let {
             companyEmailInput.setText(it.email)
         }
+
         // Handle submit button click
         findViewById<View>(R.id.Save).setOnClickListener {
             submitCompanyData()
         }
-
     }
+
     private fun submitCompanyData() {
         // Get values from the text fields
         val companyName = companyNameInput.text.toString().trim()
@@ -82,7 +77,7 @@ class CompanyInfo : AppCompatActivity() {
             return
         }
 
-        // Create a simple data class for the company
+        // Create a map for the company data
         val companyData = mapOf(
             "companyName" to companyName,
             "companyEmail" to companyEmail,
@@ -91,8 +86,8 @@ class CompanyInfo : AppCompatActivity() {
             "companyDescription" to companyDescription,
         )
 
-        // Upload company data under the user's ID
-        companyRef.child(userId).updateChildren(companyData)
+        // Upload company data to Firestore under the user's ID in the "companies" collection
+        firestore.collection("companies").document(userId).set(companyData)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     startActivity(Intent(this, CompanyMoreInfo::class.java))

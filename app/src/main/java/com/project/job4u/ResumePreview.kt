@@ -10,6 +10,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,6 +21,7 @@ import java.io.IOException
 
 class ResumePreview : AppCompatActivity() {
     private lateinit var pdfImageView: ImageView
+    private val firestore = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,13 +35,37 @@ class ResumePreview : AppCompatActivity() {
 
         pdfImageView = findViewById(R.id.pdfImageView)
 
-        val resume = intent.getStringExtra("resume")
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        val resumeId = intent.getStringExtra("resumeId")
 
-        if (resume != null) {
-            downloadAndRenderPdf(resume)
+        if (userId != null && resumeId != null) {
+            fetchResumeUrl(userId, resumeId)
+        } else {
+            Toast.makeText(this, "No resume data available", Toast.LENGTH_SHORT).show()
         }
     }
 
+    private fun fetchResumeUrl(userId: String, resumeId: String) {
+        // Fetch the resume document from Firestore
+        val resumeRef = firestore.collection("users").document(userId).collection("resumes").document(resumeId)
+
+        resumeRef.get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val pdfUrl = document.getString("resumeUrl")
+                    if (pdfUrl != null) {
+                        downloadAndRenderPdf(pdfUrl)
+                    } else {
+                        Toast.makeText(this, "PDF URL not found", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(this, "Resume not found", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener { exception ->
+                Toast.makeText(this, "Failed to fetch resume: ${exception.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
 
     private fun downloadAndRenderPdf(pdfUrl: String) {
         val client = OkHttpClient()

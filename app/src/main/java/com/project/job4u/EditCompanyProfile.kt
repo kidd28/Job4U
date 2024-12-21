@@ -10,10 +10,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.SetOptions
 
 class EditCompanyProfile : AppCompatActivity() {
     private lateinit var companyNameEditText: EditText
@@ -28,6 +27,8 @@ class EditCompanyProfile : AppCompatActivity() {
     private lateinit var stateProvinceEditText: EditText
     private lateinit var saveProfileButton: Button
 
+    private val db = FirebaseFirestore.getInstance()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -37,6 +38,7 @@ class EditCompanyProfile : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
         // Initialize UI elements
         companyNameEditText = findViewById(R.id.edit_company_name)
         companyEmailEditText = findViewById(R.id.edit_company_email)
@@ -60,6 +62,7 @@ class EditCompanyProfile : AppCompatActivity() {
             }
         }
     }
+
     private fun loadCompanyProfile() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId == null) {
@@ -67,38 +70,40 @@ class EditCompanyProfile : AppCompatActivity() {
             return
         }
 
-        val companyRef = FirebaseDatabase.getInstance().getReference("companies").child(userId)
-        companyRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                // Retrieve current company data
-                val companyName = snapshot.child("companyName").getValue(String::class.java)
-                val companyEmail = snapshot.child("companyEmail").getValue(String::class.java)
-                val companyPhone = snapshot.child("companyPhone").getValue(String::class.java)
-                val companyDescription = snapshot.child("companyDescription").getValue(String::class.java)
-                val companyWebsite = snapshot.child("companyWebsite").getValue(String::class.java)
-                val companySize = snapshot.child("companySize").getValue(String::class.java)
-                val streetAddress = snapshot.child("streetAddress").getValue(String::class.java)
-                val city = snapshot.child("city").getValue(String::class.java)
-                val businessType = snapshot.child("businessType").getValue(String::class.java)
-                val stateProvince = snapshot.child("stateProvince").getValue(String::class.java)
+        val companyRef = db.collection("companies").document(userId)
+        companyRef.get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    // Retrieve current company data
+                    val companyName = document.getString("companyName")
+                    val companyEmail = document.getString("companyEmail")
+                    val companyPhone = document.getString("companyPhone")
+                    val companyDescription = document.getString("companyDescription")
+                    val companyWebsite = document.getString("companyWebsite")
+                    val companySize = document.getString("companySize")
+                    val streetAddress = document.getString("streetAddress")
+                    val city = document.getString("city")
+                    val businessType = document.getString("businessType")
+                    val stateProvince = document.getString("stateProvince")
 
-                // Populate the fields with the current data
-                companyName?.let { companyNameEditText.setText(it) }
-                companyEmail?.let { companyEmailEditText.setText(it) }
-                companyPhone?.let { companyPhoneEditText.setText(it) }
-                companyDescription?.let { companyDescriptionEditText.setText(it) }
-                companyWebsite?.let { companyWebsiteEditText.setText(it) }
-                companySize?.let { companySizeEditText.setText(it) }
-                streetAddress?.let { streetAddressEditText.setText(it) }
-                city?.let { cityEditText.setText(it) }
-                businessType?.let { businessTypeEditText.setText(it) }
-                stateProvince?.let { stateProvinceEditText.setText(it) }
+                    // Populate the fields with the current data
+                    companyName?.let { companyNameEditText.setText(it) }
+                    companyEmail?.let { companyEmailEditText.setText(it) }
+                    companyPhone?.let { companyPhoneEditText.setText(it) }
+                    companyDescription?.let { companyDescriptionEditText.setText(it) }
+                    companyWebsite?.let { companyWebsiteEditText.setText(it) }
+                    companySize?.let { companySizeEditText.setText(it) }
+                    streetAddress?.let { streetAddressEditText.setText(it) }
+                    city?.let { cityEditText.setText(it) }
+                    businessType?.let { businessTypeEditText.setText(it) }
+                    stateProvince?.let { stateProvinceEditText.setText(it) }
+                } else {
+                    Toast.makeText(this, "No company profile found", Toast.LENGTH_SHORT).show()
+                }
             }
-
-            override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(this@EditCompanyProfile, "Failed to load company profile: ${error.message}", Toast.LENGTH_SHORT).show()
+            .addOnFailureListener {
+                Toast.makeText(this, "Failed to load company profile", Toast.LENGTH_SHORT).show()
             }
-        })
     }
 
     private fun validateFields(): Boolean {
@@ -141,7 +146,7 @@ class EditCompanyProfile : AppCompatActivity() {
 
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId != null) {
-            val companyRef = FirebaseDatabase.getInstance().getReference("companies").child(userId)
+            val companyRef = db.collection("companies").document(userId)
 
             val companyUpdates = mapOf(
                 "companyName" to companyName,
@@ -156,7 +161,7 @@ class EditCompanyProfile : AppCompatActivity() {
                 "stateProvince" to stateProvince
             )
 
-            companyRef.updateChildren(companyUpdates)
+            companyRef.update(companyUpdates)
                 .addOnSuccessListener {
                     Toast.makeText(this, "Company profile updated successfully", Toast.LENGTH_SHORT).show()
                     val intent = Intent(this, MainActivity::class.java)

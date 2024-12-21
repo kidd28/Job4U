@@ -12,12 +12,8 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
-import com.project.job4u.Authentication.EmployerSignUp
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.DocumentSnapshot
 import com.project.job4u.Authentication.SignInActivity
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -33,7 +29,7 @@ class ApplicantJobDetails : AppCompatActivity() {
     private lateinit var requirementsText: TextView
     private lateinit var postedOnText: TextView
 
-    private lateinit var database: DatabaseReference
+    private lateinit var db: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
     private lateinit var jobId: String
     private lateinit var status: String
@@ -41,6 +37,7 @@ class ApplicantJobDetails : AppCompatActivity() {
     private lateinit var withdrawButton: MaterialButton
     private lateinit var applyButton: MaterialButton
     private lateinit var saveButton: MaterialButton
+    private lateinit var unsaveButton: MaterialButton
     private lateinit var sign_in: MaterialButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +51,7 @@ class ApplicantJobDetails : AppCompatActivity() {
         }
 
         auth = FirebaseAuth.getInstance()
-        database = FirebaseDatabase.getInstance().reference
+        db = FirebaseFirestore.getInstance()
 
         // Initialize views
         jobTitleText = findViewById(R.id.jobTitleText)
@@ -101,6 +98,7 @@ class ApplicantJobDetails : AppCompatActivity() {
         withdrawButton = findViewById(R.id.withdraw_button)
         applyButton = findViewById(R.id.apply_button)
         saveButton = findViewById(R.id.save_button)
+        unsaveButton = findViewById(R.id.unsave_button)
         sign_in = findViewById(R.id.sign_in)
 
         val userId = FirebaseAuth.getInstance().currentUser?.uid
@@ -110,16 +108,16 @@ class ApplicantJobDetails : AppCompatActivity() {
             applyButton.visibility = View.GONE
             saveButton.visibility = View.GONE
             sign_in.visibility = View.VISIBLE
-        }else{
+        } else {
             withdrawButton.visibility = View.VISIBLE
             applyButton.visibility = View.VISIBLE
             saveButton.visibility = View.VISIBLE
             sign_in.visibility = View.GONE
         }
 
-
         // Check if the applicant has already applied or saved this job
         checkJobStatus()
+
 
         // Apply button click listener
         applyButton.setOnClickListener {
@@ -136,57 +134,69 @@ class ApplicantJobDetails : AppCompatActivity() {
             if (job != null) {
                 saveJob(job)
             }
-            if(applicationDetails != null){
+            if (applicationDetails != null) {
                 saveJob(applicationDetails)
             }
         }
         sign_in.setOnClickListener {
             val intent = Intent(this, SignInActivity::class.java)
-            startActivity(intent) }
+            startActivity(intent)
+        }
+        unsaveButton.setOnClickListener {
+            Unsave()
+        }
+    }
+
+    private fun Unsave() {
+        val userId = auth.currentUser?.uid ?: return
+        db.collection("savedJobs").document(userId).collection("jobs").document(jobId).delete().addOnSuccessListener {
+                // Job is saved, show "Saved" on button
+                saveButton.visibility = View.VISIBLE
+                unsaveButton.visibility = View.GONE
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+            Toast.makeText(this, "Job was removed from saved jobs successfully", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun checkJobStatus() {
         val userId = auth.currentUser?.uid ?: return
 
         // Check if the jobId is in the user's jobApplied node
-        database.child("users").child(userId).child("jobApplied").child(jobId)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (snapshot.exists()) {
-                        // Job is already applied for, show Withdraw button
-                        applyButton.visibility = View.GONE
-                        withdrawButton.visibility = View.VISIBLE
-                    } else {
-                        // Job is not yet applied, show Apply button
-                        applyButton.visibility = View.VISIBLE
-                        withdrawButton.visibility = View.GONE
-                    }
+        db.collection("users").document(userId).collection("jobApplied").document(jobId)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    // Job is already applied for, show Withdraw button
+                    applyButton.visibility = View.GONE
+                    withdrawButton.visibility = View.VISIBLE
+                } else {
+                    // Job is not yet applied, show Apply button
+                    applyButton.visibility = View.VISIBLE
+                    withdrawButton.visibility = View.GONE
                 }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Toast.makeText(this@ApplicantJobDetails, "Failed to check application status", Toast.LENGTH_SHORT).show()
-                }
-            })
+            }
+            .addOnFailureListener {
+                Toast.makeText(this@ApplicantJobDetails, "Failed to check application status", Toast.LENGTH_SHORT).show()
+            }
 
         // Check if the job is saved
-        database.child("savedJobs").child(userId).child(jobId)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (snapshot.exists()) {
-                        // Job is saved, show "Saved" on button
-                        saveButton.text = "Saved"
-                        saveButton.isEnabled = false
-                    } else {
-                        // Job is not saved, show "Save" button
-                        saveButton.text = "Save Job"
-                        saveButton.isEnabled = true
-                    }
+        db.collection("savedJobs").document(userId).collection("jobs").document(jobId)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    // Job is saved, show "Saved" on button
+                    saveButton.visibility = View.GONE
+                    unsaveButton.visibility = View.VISIBLE
+                } else {
+                    // Job is not saved, show "Save" button
+                    saveButton.visibility = View.VISIBLE
+                    unsaveButton.visibility = View.GONE
                 }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Toast.makeText(this@ApplicantJobDetails, "Failed to check saved job status", Toast.LENGTH_SHORT).show()
-                }
-            })
+            }
+            .addOnFailureListener {
+                Toast.makeText(this@ApplicantJobDetails, "Failed to check saved job status", Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun showApplyConfirmationDialog(job: Job?) {
@@ -209,7 +219,7 @@ class ApplicantJobDetails : AppCompatActivity() {
     }
 
     private fun applyForJob(job: Job) {
-        val userId = auth.currentUser?.uid ?: return // Ensure the user is logged in
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return // Ensure the user is logged in
         val jobId = job.jobId // Ensure that job has a jobId property
 
         // Get the current date in the format "MM-dd-yyyy"
@@ -217,48 +227,51 @@ class ApplicantJobDetails : AppCompatActivity() {
         val currentDate = dateFormat.format(Date())
 
         // Fetch the user's name and email from the "users" node
-        val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
-        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val firstname = snapshot.child("firstname").getValue(String::class.java) ?: "Unknown"
-                val lastname = snapshot.child("lastname").getValue(String::class.java) ?: "Unknown"
-                val applicantEmail = snapshot.child("email").getValue(String::class.java) ?: "Unknown"
-                val applicantResume = snapshot.child("resume").getValue(String::class.java) ?: "Unknown"
-                val applicantPhone = snapshot.child("phone").getValue(String::class.java) ?: "Unknown"
+        val userRef = FirebaseFirestore.getInstance().collection("users").document(userId)
+        userRef.get()
+            .addOnSuccessListener { document ->
+                val firstname = document.getString("firstname") ?: "Unknown"
+                val lastname = document.getString("lastname") ?: "Unknown"
+                val applicantEmail = document.getString("email") ?: "Unknown"
+                val applicantResume = document.getString("resume") ?: "Unknown"
+                val applicantPhone = document.getString("phone") ?: "Unknown"
 
-                // Create an Application object with the necessary job details and user information
-                val applicationData = Application(
-                    jobId = jobId,
-                    jobTitle = job.jobTitle,
-                    companyName = job.companyName,
-                    location = "${job.city}, ${job.state}",
-                    description = job.jobDescription,
-                    salary = job.salary,
-                    requirements = job.requirements,
-                    postedOn = job.postedOn,
-                    applicationStatus = "applied", // Initial status is "applied"
-                    date = currentDate,
-                    userId = userId,
-                    postedBy = job.postedBy,
-                    applicantName = firstname+" "+lastname,
-                    applicantEmail = applicantEmail,
-                    applicantResume = applicantResume,
-                    applicantPhone = applicantPhone
+                // Create an Application map with the necessary job details and user information
+                val applicationData = hashMapOf(
+                    "jobId" to jobId,
+                    "jobTitle" to job.jobTitle,
+                    "companyName" to job.companyName,
+                    "location" to "${job.city}, ${job.state}",
+                    "description" to job.jobDescription,
+                    "salary" to job.salary,
+                    "requirements" to job.requirements,
+                    "postedOn" to job.postedOn,
+                    "applicationStatus" to "applied", // Initial status is "applied"
+                    "date" to currentDate,
+                    "userId" to userId,
+                    "postedBy" to job.postedBy,
+                    "applicantName" to "$firstname $lastname",
+                    "applicantEmail" to applicantEmail,
+                    "applicantResume" to applicantResume,
+                    "applicantPhone" to applicantPhone
                 )
 
-                // Step 1: Add the application to the "applications" node under the userId
-                val applicationRef = FirebaseDatabase.getInstance().getReference("applications")
-                    .child(userId) // Add under the user's node
-                    .child(jobId)  // Add under the specific jobId node
-                applicationRef.setValue(applicationData)
+                // Generate applicationId using current timestamp
+                val applicationId = System.currentTimeMillis().toString()
+
+                // Save the application to Firestore under the path: applications > applicationId
+                FirebaseFirestore.getInstance().collection("applications")
+                    .document(applicationId) // Use generated timestamp as document ID
+                    .set(applicationData)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            // Step 2: Add jobId under the "jobApplied" node in the user's node
-                            val userJobAppliedRef = FirebaseDatabase.getInstance().getReference("users")
-                                .child(userId) // Under the user node
-                                .child("jobApplied") // Inside jobApplied node
-                                .child(jobId) // Add jobId under jobApplied
-                            userJobAppliedRef.setValue(true) // Indicating that the user has applied for this job
+                            // Optionally, add jobId under the "jobApplied" collection in the user's node
+                            FirebaseFirestore.getInstance().collection("users")
+                                .document(userId)
+                                .collection("jobApplied") // Subcollection to track applied jobs
+                                .document(jobId) // Save jobId as document ID
+                                .set(mapOf("applied" to true))
+
                             val intent = Intent(this@ApplicantJobDetails, MainActivity::class.java)
                             startActivity(intent)
                             Toast.makeText(this@ApplicantJobDetails, "Application submitted successfully", Toast.LENGTH_SHORT).show()
@@ -267,18 +280,17 @@ class ApplicantJobDetails : AppCompatActivity() {
                         }
                     }
             }
-
-            override fun onCancelled(error: DatabaseError) {
+            .addOnFailureListener {
                 Toast.makeText(this@ApplicantJobDetails, "Failed to retrieve user details", Toast.LENGTH_SHORT).show()
             }
-        })
     }
+
 
     private fun saveJob(job: Job?) {
         val userId = auth.currentUser?.uid ?: return
         val jobId = job?.jobId ?: return
 
-        // Save job details under the savedJobs node
+        // Save job details under the savedJobs collection
         val savedJob = Application(
             jobId = jobId,
             jobTitle = job?.jobTitle ?: "",
@@ -292,8 +304,8 @@ class ApplicantJobDetails : AppCompatActivity() {
             date = SimpleDateFormat("MM-dd-yyyy", Locale.getDefault()).format(Date())
         )
 
-        // Save the job in the savedJobs node
-        database.child("savedJobs").child(userId).child(jobId).setValue(savedJob)
+        // Save the job in the savedJobs collection
+        db.collection("savedJobs").document(userId).collection("jobs").document(jobId).set(savedJob)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     saveButton.text = "Saved"
@@ -306,28 +318,14 @@ class ApplicantJobDetails : AppCompatActivity() {
                 }
             }
     }
-
 
     private fun saveJob(application: Application?) {
         val userId = auth.currentUser?.uid ?: return
         val jobId = application?.jobId ?: return
 
-        // Save job details under the savedJobs node
-        val savedJob = Application(
-            jobId = jobId,
-            jobTitle = application?.jobTitle ?: "",
-            companyName = application?.companyName ?: "",
-            location = application.location,
-            description = application?.description ?: "",
-            salary = application?.salary ?: "",
-            requirements = application?.requirements ?: "",
-            postedOn = application?.postedOn ?: "",
-            applicationStatus = "saved", // Mark as saved
-            date = SimpleDateFormat("MM-dd-yyyy", Locale.getDefault()).format(Date())
-        )
-
-        // Save the job in the savedJobs node
-        database.child("savedJobs").child(userId).child(jobId).setValue(savedJob)
+        // Save the application as saved
+        db.collection("savedJobs").document(userId).collection("jobs").document(jobId)
+            .set(application!!)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     saveButton.text = "Saved"
@@ -340,18 +338,19 @@ class ApplicantJobDetails : AppCompatActivity() {
                 }
             }
     }
+
     private fun showWithdrawConfirmationDialog() {
         val builder = MaterialAlertDialogBuilder(this)
-        builder.setTitle("Confirm Withdrawal")
+        builder.setTitle("Withdraw Application")
         builder.setMessage("Are you sure you want to withdraw your application for this job?")
 
         builder.setPositiveButton("Withdraw") { dialog, _ ->
             withdrawApplication()
-            dialog.dismiss() // Close the dialog after withdrawing
+            dialog.dismiss()
         }
 
         builder.setNegativeButton("Cancel") { dialog, _ ->
-            dialog.dismiss() // Simply close the dialog if canceled
+            dialog.dismiss()
         }
 
         builder.show()
@@ -360,31 +359,60 @@ class ApplicantJobDetails : AppCompatActivity() {
     private fun withdrawApplication() {
         val userId = auth.currentUser?.uid ?: return
 
-        // Remove the application from the "applications" node (delete the specific job's application)
-        val applicationRef = database.child("applications").child(userId).child(jobId)
+        // Reference to the application in the "applications" collection using applicationId (timestamp)
+        val applicationRef = db.collection("applications")
+            .whereEqualTo("userId", userId) // Find the application by userId
+            .whereEqualTo("jobId", jobId) // and jobId to ensure it's the correct application
+            .limit(1) // To ensure we get only one application
 
-        applicationRef.removeValue().addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                // Remove the jobId from user's "jobApplied" list
-                val userJobAppliedRef = database.child("users").child(userId).child("jobApplied").child(jobId)
-                userJobAppliedRef.removeValue().addOnCompleteListener { innerTask ->
-                    if (innerTask.isSuccessful) {
-                        // Both application and jobApplied data have been deleted
-                        Toast.makeText(this, "Application withdrawn successfully", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(this, MainActivity::class.java)
-                        startActivity(intent)
-                        // Hide the withdraw button and show the apply button again
-                        applyButton.visibility = View.VISIBLE
-                        withdrawButton.visibility = View.GONE
-                    } else {
-                        // Failed to remove from jobApplied list
-                        Toast.makeText(this, "Failed to update application status", Toast.LENGTH_SHORT).show()
+        // Fetch the application document
+        applicationRef.get().addOnSuccessListener { querySnapshot ->
+            if (!querySnapshot.isEmpty) {
+                val applicationDoc = querySnapshot.documents[0]
+                val applicationId = applicationDoc.id // Get the applicationId (document ID)
+
+                // Delete the application document using the applicationId
+                db.collection("applications")
+                    .document(applicationId)
+                    .delete()
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            // Reference to the user's jobApplied document
+                            val userJobAppliedRef = db.collection("users")
+                                .document(userId)
+                                .collection("jobApplied")
+                                .document(jobId)
+
+                            // Remove the jobId from the "jobApplied" collection
+                            userJobAppliedRef.delete().addOnCompleteListener { innerTask ->
+                                if (innerTask.isSuccessful) {
+                                    // Both application and jobApplied data have been deleted
+                                    Toast.makeText(this, "Application withdrawn successfully", Toast.LENGTH_SHORT).show()
+                                    val intent = Intent(this, MainActivity::class.java)
+                                    startActivity(intent)
+
+                                    // Hide the withdraw button and show the apply button again
+                                    applyButton.visibility = View.VISIBLE
+                                    withdrawButton.visibility = View.GONE
+                                } else {
+                                    // Failed to remove from jobApplied list
+                                    Toast.makeText(this, "Failed to update application status", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                            // Failed to remove application from "applications"
+                            Toast.makeText(this, "Failed to withdraw application", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
             } else {
-                // Failed to remove application from "applications"
-                Toast.makeText(this, "Failed to withdraw application", Toast.LENGTH_SHORT).show()
+                // No application found for this user and job
+                Toast.makeText(this, "No application found to withdraw", Toast.LENGTH_SHORT).show()
             }
+        }.addOnFailureListener {
+            // Failed to fetch the application
+            Toast.makeText(this, "Failed to fetch application details", Toast.LENGTH_SHORT).show()
         }
     }
+
+
 }

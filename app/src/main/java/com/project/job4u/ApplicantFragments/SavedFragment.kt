@@ -12,12 +12,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
-import com.project.job4u.Adapter.MyApplicationsAdapter
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.QuerySnapshot
 import com.project.job4u.Adapter.SavedAdapter
 import com.project.job4u.ApplicantJobDetails
 import com.project.job4u.Application
@@ -25,26 +21,18 @@ import com.project.job4u.Authentication.SignInActivity
 import com.project.job4u.R
 
 // TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
 private const val ARG_PARAM1 = "param1"
 private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [SavedFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 
 class SavedFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: SavedAdapter
-    private lateinit var database: DatabaseReference
     private val savedJobsList = mutableListOf<Application>()
     private lateinit var not_signed_in: LinearLayout
     private lateinit var sign_in_button: MaterialButton
-    // TODO: Rename and change types of parameters
     private var param1: String? = null
     private var param2: String? = null
+    private val firestore = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +52,7 @@ class SavedFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(context)
         not_signed_in = view.findViewById(R.id.not_signed_in)
         sign_in_button = view.findViewById(R.id.sign_in_button)
-        // Initialize the SavedAdapter with savedJobsList and job item click handler
+
         adapter = SavedAdapter(savedJobsList) { savedJob ->
             // Navigate to job details activity
             val intent = Intent(requireContext(), ApplicantJobDetails::class.java)
@@ -73,58 +61,57 @@ class SavedFragment : Fragment() {
         }
 
         recyclerView.adapter = adapter
-        database = FirebaseDatabase.getInstance().reference
-
         fetchSavedJobs()
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId == null) {
             recyclerView.visibility = View.GONE
             not_signed_in.visibility = View.VISIBLE
-        }else{
+        } else {
             recyclerView.visibility = View.VISIBLE
             not_signed_in.visibility = View.GONE
         }
 
         sign_in_button.setOnClickListener {
             val intent = Intent(requireContext(), SignInActivity::class.java)
-            startActivity(intent) }
+            startActivity(intent)
+        }
         return view
     }
 
     private fun fetchSavedJobs() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
-        val savedJobsRef = database.child("savedJobs").child(userId.toString())
+        val savedJobsRef = firestore.collection("savedJobs").document(userId.toString()).collection("jobs")
 
-        savedJobsRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
+        if (userId == null) {
+            recyclerView.visibility = View.GONE
+            not_signed_in.visibility = View.VISIBLE
+        } else {
+            recyclerView.visibility = View.VISIBLE
+            not_signed_in.visibility = View.GONE
+        }
+
+        // Fetch all the saved jobs under "jobs" subcollection
+        savedJobsRef.get()
+            .addOnSuccessListener { result: QuerySnapshot ->
                 savedJobsList.clear()
-                if (snapshot.exists()) {
-                    for (savedJobSnapshot in snapshot.children) {
-                        val savedJob = savedJobSnapshot.getValue(Application::class.java)
+                if (!result.isEmpty) {
+                    for (document in result.documents) {
+                        val savedJob = document.toObject(Application::class.java)  // Assuming Job is the class for the job details
                         savedJob?.let {
                             savedJobsList.add(it)
                         }
                     }
                     adapter.notifyDataSetChanged()
+                } else {
+                    // If no saved jobs, notify the adapter with empty list
+                    adapter.notifyDataSetChanged()
                 }
             }
-
-            override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(context, "Failed to load saved jobs", Toast.LENGTH_SHORT).show()
+            .addOnFailureListener { exception ->
+                Toast.makeText(context, "Failed to load saved jobs: ${exception.message}", Toast.LENGTH_SHORT).show()
             }
-        })
-}
-
+    }
     companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment SavedFragment.
-         */
-        // TODO: Rename and change types and number of parameters
         @JvmStatic
         fun newInstance(param1: String, param2: String) =
             SavedFragment().apply {

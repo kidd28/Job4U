@@ -9,32 +9,22 @@ import android.widget.Toast
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.FieldValue
 import com.project.job4u.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
 private const val ARG_PARAM1 = "param1"
 private const val ARG_PARAM2 = "param2"
 
-/**
- * A simple [Fragment] subclass.
- * Use the [PostJob.newInstance] factory method to
- * create an instance of this fragment.
- */
 class PostJob : Fragment() {
-    private lateinit var database: DatabaseReference
+    private lateinit var db: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
-    private lateinit var companyRef: DatabaseReference
+    private lateinit var companyRef: DocumentReference
 
-    // TODO: Rename and change types of parameters
     private var param1: String? = null
     private var param2: String? = null
 
@@ -50,12 +40,10 @@ class PostJob : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
         val view = inflater.inflate(R.layout.fragment_post_job, container, false)
 
         auth = FirebaseAuth.getInstance()
-        database = FirebaseDatabase.getInstance().reference.child("jobPosts")
-        companyRef = FirebaseDatabase.getInstance().getReference("companies")
+        db = FirebaseFirestore.getInstance()
 
         val etJobTitle: TextInputEditText = view.findViewById(R.id.etJobTitle)
         val etCompanyName: TextInputEditText = view.findViewById(R.id.etCompanyName)
@@ -70,20 +58,21 @@ class PostJob : Fragment() {
         // Fetch and set company name if user is an employer
         val userId = auth.currentUser?.uid
         if (userId != null) {
-            companyRef.child(userId).child("companyName").addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val companyName = snapshot.getValue(String::class.java)
+            companyRef = db.collection("companies").document(userId)
+
+            companyRef.get().addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val companyName = document.getString("companyName")
                     if (companyName != null) {
                         etCompanyName.setText(companyName)
                         etCompanyName.isEnabled = false
                     }
+                } else {
+                    Toast.makeText(requireContext(), "No company data found", Toast.LENGTH_SHORT).show()
                 }
-
-                override fun onCancelled(error: DatabaseError) {
-                    // Handle error
-                    Toast.makeText(requireContext(), "Failed to fetch company name: ${error.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
+            }.addOnFailureListener {
+                Toast.makeText(requireContext(), "Failed to fetch company name", Toast.LENGTH_SHORT).show()
+            }
         }
 
         btnSubmit.setOnClickListener {
@@ -97,16 +86,14 @@ class PostJob : Fragment() {
             val jobType = etJobType.text.toString().trim()
 
             if (jobTitle.isEmpty() || companyName.isEmpty() || jobDescription.isEmpty() ||
-                requirements.isEmpty() || state.isEmpty()|| city.isEmpty() || salary.isEmpty() || jobType.isEmpty()) {
+                requirements.isEmpty() || state.isEmpty() || city.isEmpty() || salary.isEmpty() || jobType.isEmpty()) {
                 Toast.makeText(requireContext(), "All fields are required", Toast.LENGTH_SHORT).show()
             } else {
                 // Use currentTimeMillis for unique jobId
                 val jobId = System.currentTimeMillis().toString()
-                // Get current date and time
-                // Get current date in MM-dd-yyyy format
                 val currentDate = SimpleDateFormat("MM-dd-yyyy", Locale.getDefault()).format(Date())
 
-                val jobData = mapOf(
+                val jobData = hashMapOf(
                     "jobId" to jobId,
                     "jobTitle" to jobTitle,
                     "companyName" to companyName,
@@ -121,14 +108,17 @@ class PostJob : Fragment() {
                     "status" to "active"
                 )
 
-                database.child(jobId).setValue(jobData).addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        Toast.makeText(requireContext(), "Job posted successfully!", Toast.LENGTH_SHORT).show()
-                        clearFields(etJobTitle, etCompanyName, etJobDescription, etRequirements, etCity,etState, etSalary, etJobType)
-                    } else {
-                        Toast.makeText(requireContext(), "Failed to post job: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                // Add job data to Firestore collection "jobPosts"
+                db.collection("jobPosts").document(jobId)
+                    .set(jobData)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            Toast.makeText(requireContext(), "Job posted successfully!", Toast.LENGTH_SHORT).show()
+                            clearFields(etJobTitle, etCompanyName, etJobDescription, etRequirements, etCity, etState, etSalary, etJobType)
+                        } else {
+                            Toast.makeText(requireContext(), "Failed to post job: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
             }
         }
 
@@ -138,16 +128,8 @@ class PostJob : Fragment() {
     private fun clearFields(vararg fields: TextInputEditText) {
         fields.forEach { it.text?.clear() }
     }
+
     companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment PostJob.
-         */
-        // TODO: Rename and change types and number of parameters
         @JvmStatic
         fun newInstance(param1: String, param2: String) =
             PostJob().apply {

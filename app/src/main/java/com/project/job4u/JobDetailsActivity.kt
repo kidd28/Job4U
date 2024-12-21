@@ -12,8 +12,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FirebaseFirestore
 
 class JobDetailsActivity : AppCompatActivity() {
 
@@ -26,7 +25,7 @@ class JobDetailsActivity : AppCompatActivity() {
     private lateinit var requirementsText: TextView
     private lateinit var postedOnText: TextView
 
-    private lateinit var database: DatabaseReference
+    private lateinit var firestore: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
     private lateinit var jobId: String // Job ID passed via intent
     private lateinit var status: String // Job ID passed via intent
@@ -35,9 +34,7 @@ class JobDetailsActivity : AppCompatActivity() {
     private lateinit var closeButton: MaterialButton
     private lateinit var open_button: MaterialButton
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_job_details)
@@ -48,7 +45,7 @@ class JobDetailsActivity : AppCompatActivity() {
         }
 
         auth = FirebaseAuth.getInstance()
-        database = FirebaseDatabase.getInstance().reference.child("jobPosts")
+        firestore = FirebaseFirestore.getInstance()
 
         // Initialize views
         jobTitleText = findViewById(R.id.jobTitleText)
@@ -68,15 +65,14 @@ class JobDetailsActivity : AppCompatActivity() {
             jobTitleText.text = job.jobTitle
             companyNameText.text = job.companyName
             jobDescriptionText.text = job.jobDescription
-            jobLocationText.text = job.city+", "+ job.state
+            jobLocationText.text = "${job.city}, ${job.state}"
             salaryText.text = job.salary
             jobTypeText.text = job.jobType
             requirementsText.text = job.requirements
             postedOnText.text = job.postedOn
 
-            jobId =job.jobId
-            status =job.status
-
+            jobId = job.jobId
+            status = job.status
         }
 
         // Initialize buttons
@@ -84,12 +80,12 @@ class JobDetailsActivity : AppCompatActivity() {
         closeButton = findViewById(R.id.close_button)
         open_button = findViewById(R.id.open_button)
 
-        if(status == "active"){
+        if (status == "active") {
             closeButton.visibility = View.VISIBLE
             open_button.visibility = View.GONE
-        }else {
+        } else {
             closeButton.visibility = View.GONE
-            open_button.visibility =View.VISIBLE
+            open_button.visibility = View.VISIBLE
         }
 
         // Open Job (Activate Job)
@@ -105,8 +101,8 @@ class JobDetailsActivity : AppCompatActivity() {
         closeButton.setOnClickListener {
             showCloseConfirmationDialog(jobId)
         }
-
     }
+
     private fun showDeleteConfirmationDialog(jobId: String) {
         // Create the Delete confirmation dialog
         AlertDialog.Builder(this)
@@ -130,6 +126,7 @@ class JobDetailsActivity : AppCompatActivity() {
             .setNegativeButton("No", null)
             .show()
     }
+
     private fun showOpenConfirmationDialog(jobId: String) {
         // Create the Open confirmation dialog
         AlertDialog.Builder(this)
@@ -141,12 +138,13 @@ class JobDetailsActivity : AppCompatActivity() {
             .setNegativeButton("No", null)
             .show()
     }
+
     private fun deleteJobPost(jobId: String) {
-        // Reference to the job in the Firebase database
-        val jobRef = database.child(jobId)
+        // Reference to the job in the Firestore database
+        val jobRef = firestore.collection("jobPosts").document(jobId)
 
         // Delete the job post entirely
-        jobRef.removeValue().addOnCompleteListener { task ->
+        jobRef.delete().addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Toast.makeText(this, "Job deleted successfully", Toast.LENGTH_SHORT).show()
                 val intent = Intent(this, MainActivity::class.java)
@@ -159,10 +157,11 @@ class JobDetailsActivity : AppCompatActivity() {
     }
 
     private fun closeJobPost(jobId: String) {
-        // Reference to the job in the Firebase database
-        val jobRef = database.child(jobId)
+        // Reference to the job in the Firestore database
+        val jobRef = firestore.collection("jobPosts").document(jobId)
+
         // Update the status of the job to "closed"
-        jobRef.child("status").setValue("closed").addOnCompleteListener { task ->
+        jobRef.update("status", "closed").addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Toast.makeText(this, "Job marked as closed", Toast.LENGTH_SHORT).show()
                 val intent = Intent(this, MainActivity::class.java)
@@ -173,12 +172,13 @@ class JobDetailsActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun openJobPost(jobId: String) {
-        // Reference to the job in the Firebase database
-        val jobRef = database.child(jobId)
+        // Reference to the job in the Firestore database
+        val jobRef = firestore.collection("jobPosts").document(jobId)
 
         // Update the status of the job to "active"
-        jobRef.child("status").setValue("active").addOnCompleteListener { task ->
+        jobRef.update("status", "active").addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Toast.makeText(this, "Job marked as active", Toast.LENGTH_SHORT).show()
                 val intent = Intent(this, MainActivity::class.java)

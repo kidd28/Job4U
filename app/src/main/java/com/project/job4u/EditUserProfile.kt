@@ -19,19 +19,15 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import de.hdodenhof.circleimageview.CircleImageView
 import java.util.Calendar
 import java.util.UUID
 
 class EditUserProfile : AppCompatActivity() {
-    private lateinit var database: DatabaseReference
     private lateinit var auth: FirebaseAuth
+    private lateinit var firestore: FirebaseFirestore
     private lateinit var firstNameEditText: EditText
     private lateinit var lastNameEditText: EditText
     private lateinit var emailEditText: EditText
@@ -47,10 +43,10 @@ class EditUserProfile : AppCompatActivity() {
     private lateinit var saveProfileButton: Button
     private val REQUEST_CODE = 1000
     private lateinit var storageReference: FirebaseStorage
-    private lateinit var databaseReference: FirebaseDatabase
 
     private lateinit var calendar: Calendar
     private lateinit var datePickerDialog: DatePickerDialog
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -60,7 +56,6 @@ class EditUserProfile : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-
 
         // Initialize UI elements
         firstNameEditText = findViewById(R.id.edit_first_name)
@@ -77,6 +72,8 @@ class EditUserProfile : AppCompatActivity() {
         changeResumeButton = findViewById(R.id.btn_change_resume)
         saveProfileButton = findViewById(R.id.btn_save_profile)
         auth = FirebaseAuth.getInstance()
+        firestore = FirebaseFirestore.getInstance()
+
         // Add logic for saving the profile when the save button is clicked
         saveProfileButton.setOnClickListener {
             if (validateFields()) {
@@ -85,13 +82,14 @@ class EditUserProfile : AppCompatActivity() {
         }
 
         storageReference = FirebaseStorage.getInstance()
-        databaseReference = FirebaseDatabase.getInstance()
         loadUserProfile()
+
         // Add logic for changing the resume
         changeResumeButton.setOnClickListener {
             // Open the file picker for resume upload
             openFileManager()
         }
+
         // Initialize Calendar and DatePickerDialog
         calendar = Calendar.getInstance()
         datePickerDialog = DatePickerDialog(
@@ -110,7 +108,6 @@ class EditUserProfile : AppCompatActivity() {
             // Show the DatePickerDialog when the user clicks the field
             datePickerDialog.show()
         }
-
     }
 
     private fun loadUserProfile() {
@@ -120,21 +117,20 @@ class EditUserProfile : AppCompatActivity() {
             return
         }
 
-        val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
-        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                if (snapshot.exists()) {
-                    val firstName = snapshot.child("firstname").getValue(String::class.java)
-                    val lastName = snapshot.child("lastname").getValue(String::class.java)
-                    val email = snapshot.child("email").getValue(String::class.java)
-                    val phone = snapshot.child("phone").getValue(String::class.java)
-                    val dob = snapshot.child("dob").getValue(String::class.java)
-                    val streetAddress = snapshot.child("street").getValue(String::class.java)
-                    val city = snapshot.child("city").getValue(String::class.java)
-                    val state = snapshot.child("state").getValue(String::class.java)
-                    val country = snapshot.child("country").getValue(String::class.java)
-                    val gender = snapshot.child("gender").getValue(String::class.java)
-                    val resumeUrl = snapshot.child("fileName").getValue(String::class.java)
+        firestore.collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val firstName = document.getString("firstname")
+                    val lastName = document.getString("lastname")
+                    val email = document.getString("email")
+                    val phone = document.getString("phone")
+                    val dob = document.getString("dob")
+                    val streetAddress = document.getString("street")
+                    val city = document.getString("city")
+                    val state = document.getString("state")
+                    val country = document.getString("country")
+                    val gender = document.getString("gender")
+                    val resumeUrl = document.getString("fileName")
 
                     // Populate the fields with data
                     firstNameEditText.setText(firstName)
@@ -153,23 +149,18 @@ class EditUserProfile : AppCompatActivity() {
                         "Female" -> genderRadioGroup.check(R.id.radio_female)
                     }
 
-                    // Load the profile image using Glide
-                    val profileImageUrl = snapshot.child("profileImage").getValue(String::class.java)
-
                     // Set resume file name
                     if (resumeUrl != null) {
                         resumeNameTextView.text = "Resume: ${resumeUrl?.substringAfterLast("/")}"
                     }
                 }
             }
-
-            override fun onCancelled(error: DatabaseError) {
+            .addOnFailureListener {
                 Toast.makeText(this@EditUserProfile, "Error loading profile", Toast.LENGTH_SHORT).show()
             }
-        })
     }
+
     private fun validateFields(): Boolean {
-        // Check if all required fields are not empty
         val firstName = firstNameEditText.text.toString().trim()
         val lastName = lastNameEditText.text.toString().trim()
         val email = emailEditText.text.toString().trim()
@@ -180,39 +171,32 @@ class EditUserProfile : AppCompatActivity() {
         val state = stateEditText.text.toString().trim()
         val country = countryEditText.text.toString().trim()
 
-        // Validate that none of the fields are empty
         if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || phone.isEmpty() ||
             dob.isEmpty() || streetAddress.isEmpty() || city.isEmpty() || state.isEmpty() || country.isEmpty()) {
             Toast.makeText(this, "Please fill in all fields.", Toast.LENGTH_SHORT).show()
             return false
         }
 
-        // Validate email format
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             Toast.makeText(this, "Please enter a valid email address.", Toast.LENGTH_SHORT).show()
             return false
         }
 
-        // Validate phone number format (just a basic check)
         if (!phone.matches("^[0-9]{10}$".toRegex())) {
             Toast.makeText(this, "Please enter a valid phone number.", Toast.LENGTH_SHORT).show()
             return false
         }
 
-        // Check gender selection
         val selectedGenderId = genderRadioGroup.checkedRadioButtonId
         if (selectedGenderId == -1) {
             Toast.makeText(this, "Please select your gender.", Toast.LENGTH_SHORT).show()
             return false
         }
 
-
-
         return true
     }
 
     private fun saveProfile() {
-        // Retrieve the values from the fields
         val firstName = firstNameEditText.text.toString().trim()
         val lastName = lastNameEditText.text.toString().trim()
         val email = emailEditText.text.toString().trim()
@@ -223,20 +207,15 @@ class EditUserProfile : AppCompatActivity() {
         val state = stateEditText.text.toString().trim()
         val country = countryEditText.text.toString().trim()
 
-        // Retrieve gender from the selected radio button
         val selectedGenderId = genderRadioGroup.checkedRadioButtonId
         val genderRadioButton = findViewById<RadioButton>(selectedGenderId)
         val gender = genderRadioButton.text.toString()
 
-        // If the user is authenticated, save to Firebase
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId != null) {
-            val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
-
-            // Create a map with the updated profile information
-            val userUpdates = mapOf(
-                "firstName" to firstName,
-                "lastName" to lastName,
+            val userProfile = mapOf(
+                "firstname" to firstName,
+                "lastname" to lastName,
                 "email" to email,
                 "phone" to phone,
                 "dob" to dob,
@@ -247,13 +226,12 @@ class EditUserProfile : AppCompatActivity() {
                 "gender" to gender
             )
 
-            // Update the user profile data in Firebase
-            userRef.updateChildren(userUpdates)
+            firestore.collection("users").document(userId).update(userProfile)
                 .addOnSuccessListener {
                     Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show()
                     val intent = Intent(this, MainActivity::class.java)
                     startActivity(intent)
-                    finish()  // Close the activity after saving
+                    finish()
                 }
                 .addOnFailureListener {
                     Toast.makeText(this, "Failed to update profile", Toast.LENGTH_SHORT).show()
@@ -262,69 +240,51 @@ class EditUserProfile : AppCompatActivity() {
             Toast.makeText(this, "User not signed in", Toast.LENGTH_SHORT).show()
         }
     }
+
     private fun openFileManager() {
         val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "application/pdf"  // For PDF files
+        intent.type = "application/pdf"
         intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
         startActivityForResult(intent, REQUEST_CODE)
     }
-    // Handle the result after file is selected
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == REQUEST_CODE && resultCode == Activity.RESULT_OK && data != null) {
-            val fileUri: Uri = data.data!!
-            val fileName = getFileName(fileUri)
+            val fileUri = data.data
+            if (fileUri != null) {
+                val fileName = getFileName(fileUri)
+                resumeNameTextView.text = "Resume: $fileName"
 
-            // Update the TextView with the file name
-            resumeNameTextView.text = "  "+fileName
-            resumeNameTextView.visibility = View.VISIBLE
-            // Upload the file to Firebase
-            uploadFileToFirebase(fileUri, fileName)
+                val fileRef = storageReference.reference.child("resumes/$fileName")
+                fileRef.putFile(fileUri)
+                    .addOnSuccessListener {
+                        Toast.makeText(this, "Resume uploaded successfully", Toast.LENGTH_SHORT).show()
+
+                        val userId = FirebaseAuth.getInstance().currentUser?.uid
+                        if (userId != null) {
+                            val resumeUrl = fileRef.downloadUrl.toString()
+                            firestore.collection("users").document(userId).update("fileName", resumeUrl)
+                        }
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(this, "Failed to upload resume", Toast.LENGTH_SHORT).show()
+                    }
+            }
         }
     }
 
-    // Upload the selected file to Firebase Storage
-    private fun uploadFileToFirebase(fileUri: Uri, fileName: String) {
-        val userId = auth.currentUser?.uid ?: return
-        val filePath = "resumes/$userId/${UUID.randomUUID()}_$fileName"
-        val fileReference = storageReference.reference.child(filePath)
-
-        fileReference.putFile(fileUri)
-            .addOnSuccessListener {
-                fileReference.downloadUrl.addOnSuccessListener { downloadUrl ->
-                    saveFileLinkToDatabase(userId, downloadUrl.toString(),fileName)
-                }
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(this, "Failed to upload resume: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-    // Save the file download link to Firebase Database
-    private fun saveFileLinkToDatabase(userId: String, fileUrl: String, fileName: String) {
-        val userResumeRef = databaseReference.reference.child("users").child(userId)
-        val userData = mapOf(
-            "resume" to fileUrl,
-            "fileName" to fileName)
-        userResumeRef.updateChildren(userData)
-            .addOnSuccessListener {
-                Toast.makeText(this, "Resume link saved successfully!", Toast.LENGTH_SHORT).show()
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(this, "Failed to save resume link: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-    // Get the file name from the Uri
     private fun getFileName(uri: Uri): String {
-        var fileName = "Unknown"
+        var name = ""
         val cursor = contentResolver.query(uri, null, null, null, null)
-        cursor?.use {
-            if (it.moveToFirst()) {
-                fileName = it.getString(it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+        if (cursor != null && cursor.moveToFirst()) {
+            val columnIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (columnIndex != -1) {
+                name = cursor.getString(columnIndex)
             }
+            cursor.close()
         }
-        return fileName
+        return name
     }
 }

@@ -17,16 +17,16 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.radiobutton.MaterialRadioButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.project.job4u.MainActivity
 import com.project.job4u.R
 import java.util.UUID
 
 class ApplicantContact : AppCompatActivity() {
-    private lateinit var database: DatabaseReference
+    private lateinit var firestore: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
+    private lateinit var storageReference: FirebaseStorage
     private lateinit var phoneInput: TextInputEditText
     private lateinit var streetInput: TextInputEditText
     private lateinit var cityInput: TextInputEditText
@@ -37,8 +37,6 @@ class ApplicantContact : AppCompatActivity() {
     private lateinit var resume_uploaded_text: TextView
     private lateinit var save: MaterialButton
     private val REQUEST_CODE = 1000
-    private lateinit var storageReference: FirebaseStorage
-    private lateinit var databaseReference: FirebaseDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +48,12 @@ class ApplicantContact : AppCompatActivity() {
             insets
         }
 
+        // Initialize Firebase
+        firestore = FirebaseFirestore.getInstance()
+        auth = FirebaseAuth.getInstance()
+        storageReference = FirebaseStorage.getInstance()
+
+        // Initialize UI components
         phoneInput = findViewById(R.id.phone_input)
         streetInput = findViewById(R.id.street_address_input)
         cityInput = findViewById(R.id.city_input)
@@ -60,14 +64,9 @@ class ApplicantContact : AppCompatActivity() {
         save = findViewById(R.id.Save)
         resume_uploaded_text = findViewById(R.id.resume_uploaded_text)
 
-        storageReference = FirebaseStorage.getInstance()
-        databaseReference = FirebaseDatabase.getInstance()
-        // Initialize Firebase Auth
-        auth = FirebaseAuth.getInstance()
-
         resumeButton.setOnClickListener { openFileManager() }
 
-        // Set submit button click listener
+        // Set save button click listener
         save.setOnClickListener {
             if (validateInputs()) {
                 uploadUserData()
@@ -76,9 +75,7 @@ class ApplicantContact : AppCompatActivity() {
     }
 
     private fun validateInputs(): Boolean {
-        // Check if the fields are empty
         return when {
-
             phoneInput.text.isNullOrEmpty() -> {
                 showToast("Phone number is required")
                 false
@@ -105,11 +102,13 @@ class ApplicantContact : AppCompatActivity() {
             }
             else -> true
         }
-    }private fun showToast(message: String) {
+    }
+
+    private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
-    private fun uploadUserData() {
 
+    private fun uploadUserData() {
         val phone = phoneInput.text.toString()
         val street = streetInput.text.toString()
         val city = cityInput.text.toString()
@@ -134,12 +133,8 @@ class ApplicantContact : AppCompatActivity() {
         // Get the current user from Firebase Authentication
         val userId = auth.currentUser?.uid ?: return showToast("User is not signed in")
 
-        // Reference to the Firebase Database location
-        database = FirebaseDatabase.getInstance().reference
-        val userRef = database.child("users").child(userId)
-
-        // Upload user data to Firebase
-        userRef.updateChildren(userData)
+        // Upload user data to Firestore
+        firestore.collection("users").document(userId).update(userData)
             .addOnSuccessListener {
                 startActivity(Intent(this, MainActivity::class.java))
             }
@@ -147,31 +142,25 @@ class ApplicantContact : AppCompatActivity() {
                 showToast("Failed: ${it.message}")
             }
     }
-    // Open file manager to select PDF or Word file
+
     private fun openFileManager() {
         val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "application/pdf"  // For PDF files
+        intent.type = "application/pdf"
         intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
         startActivityForResult(intent, REQUEST_CODE)
     }
 
-    // Handle the result after file is selected
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-
         if (requestCode == REQUEST_CODE && resultCode == Activity.RESULT_OK && data != null) {
             val fileUri: Uri = data.data!!
             val fileName = getFileName(fileUri)
-
-            // Update the TextView with the file name
-            resume_uploaded_text.text = "  "+fileName
+            resume_uploaded_text.text = "  $fileName"
             resume_uploaded_text.visibility = View.VISIBLE
-            // Upload the file to Firebase
             uploadFileToFirebase(fileUri, fileName)
         }
     }
 
-    // Upload the selected file to Firebase Storage
     private fun uploadFileToFirebase(fileUri: Uri, fileName: String) {
         val userId = auth.currentUser?.uid ?: return
         val filePath = "resumes/$userId/${UUID.randomUUID()}_$fileName"
@@ -180,30 +169,28 @@ class ApplicantContact : AppCompatActivity() {
         fileReference.putFile(fileUri)
             .addOnSuccessListener {
                 fileReference.downloadUrl.addOnSuccessListener { downloadUrl ->
-                    saveFileLinkToDatabase(userId, downloadUrl.toString(),fileName)
+                    saveFileLinkToFirestore(userId, downloadUrl.toString(), fileName)
                 }
             }
             .addOnFailureListener { e ->
-                Toast.makeText(this, "Failed to upload resume: ${e.message}", Toast.LENGTH_SHORT).show()
+                showToast("Failed to upload resume: ${e.message}")
             }
     }
 
-    // Save the file download link to Firebase Database
-    private fun saveFileLinkToDatabase(userId: String, fileUrl: String, fileName: String) {
-        val userResumeRef = databaseReference.reference.child("users").child(userId)
+    private fun saveFileLinkToFirestore(userId: String, fileUrl: String, fileName: String) {
         val userData = mapOf(
             "resume" to fileUrl,
-            "fileName" to fileName)
-        userResumeRef.updateChildren(userData)
+            "fileName" to fileName
+        )
+        firestore.collection("users").document(userId).update(userData)
             .addOnSuccessListener {
-                Toast.makeText(this, "Resume link saved successfully!", Toast.LENGTH_SHORT).show()
+                showToast("Resume link saved successfully!")
             }
             .addOnFailureListener { e ->
-                Toast.makeText(this, "Failed to save resume link: ${e.message}", Toast.LENGTH_SHORT).show()
+                showToast("Failed to save resume link: ${e.message}")
             }
     }
 
-    // Get the file name from the Uri
     private fun getFileName(uri: Uri): String {
         var fileName = "Unknown"
         val cursor = contentResolver.query(uri, null, null, null, null)

@@ -16,6 +16,7 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.project.job4u.MainActivity
 import com.project.job4u.R
@@ -44,6 +45,9 @@ class CompanyProfile : Fragment() {
     private lateinit var companySizeTextView: TextView
     private var imageUri: Uri? = null
     private val PICK_IMAGE_REQUEST = 71
+
+
+
     // TODO: Rename and change types of parameters
     private var param1: String? = null
     private var param2: String? = null
@@ -84,35 +88,35 @@ class CompanyProfile : Fragment() {
         if (userId == null) {
             Toast.makeText(context, "User not signed in", Toast.LENGTH_SHORT).show()
             return
-        }else{
-
         }
 
-        val companyRef = FirebaseDatabase.getInstance().getReference("companies").child(userId)
-        companyRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val companyName = snapshot.child("companyName").getValue(String::class.java)
-                val companyEmail = snapshot.child("companyEmail").getValue(String::class.java)
-                val companyPhone = snapshot.child("companyPhone").getValue(String::class.java)
-                val companyWebsite = snapshot.child("companyWebsite").getValue(String::class.java)
-                val streetAddress = snapshot.child("streetAddress").getValue(String::class.java)
-                val city = snapshot.child("city").getValue(String::class.java)
-                val stateProvince = snapshot.child("stateProvince").getValue(String::class.java)
+        val firestore = FirebaseFirestore.getInstance()
+        val companyRef = firestore.collection("companies").document(userId)
+
+        companyRef.get().addOnSuccessListener { snapshot ->
+            if (snapshot.exists()) {
+                val companyName = snapshot.getString("companyName")
+                val companyEmail = snapshot.getString("companyEmail")
+                val companyPhone = snapshot.getString("companyPhone")
+                val companyWebsite = snapshot.getString("companyWebsite")
+                val streetAddress = snapshot.getString("streetAddress")
+                val city = snapshot.getString("city")
+                val stateProvince = snapshot.getString("stateProvince")
                 val companyAddress = "$streetAddress, $city, $stateProvince"
-                val businessType = snapshot.child("businessType").getValue(String::class.java)
-                val companyDescription = snapshot.child("companyDescription").getValue(String::class.java)
-                val companySize = snapshot.child("companySize").getValue(String::class.java)
-                val companyImageUrl = snapshot.child("companyImage").getValue(String::class.java)
+                val businessType = snapshot.getString("businessType")
+                val companyDescription = snapshot.getString("companyDescription")
+                val companySize = snapshot.getString("companySize")
+                val companyImageUrl = snapshot.getString("companyImage")
 
                 // Populate the fields
                 companyNameTextView.text = companyName
                 companyEmailTextView.text = companyEmail
-                companyPhoneTextView.text = "Phone: "+" "+companyPhone
-                companyWebsiteTextView.text = "Website: "+" "+companyWebsite ?: "Not Provided"
-                companyAddressTextView.text ="Address: "+" "+ companyAddress
-                businessTypeTextView.text = "Business Type: "+" "+businessType
-                companyDescriptionTextView.text = "Description: "+" "+companyDescription
-                companySizeTextView.text = "Size: "+" "+companySize
+                companyPhoneTextView.text = "Phone: $companyPhone"
+                companyWebsiteTextView.text = "Website: $companyWebsite"
+                companyAddressTextView.text = "Address: $companyAddress"
+                businessTypeTextView.text = "Business Type: $businessType"
+                companyDescriptionTextView.text = "Description: $companyDescription"
+                companySizeTextView.text = "Size: $companySize"
 
                 // Load company image using Glide
                 Glide.with(this@CompanyProfile)
@@ -120,11 +124,12 @@ class CompanyProfile : Fragment() {
                     .placeholder(R.drawable.ic_profile)
                     .error(R.drawable.ic_profile)
                     .into(companyImage)
+            } else {
+                Toast.makeText(context, "No company profile found", Toast.LENGTH_SHORT).show()
             }
-            override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(context, "Failed to load company profile: ${error.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+        }.addOnFailureListener {
+            Toast.makeText(context, "Failed to load company profile", Toast.LENGTH_SHORT).show()
+        }
     }
 
     // Open image picker to choose a picture
@@ -155,13 +160,13 @@ class CompanyProfile : Fragment() {
             val storageRef = FirebaseStorage.getInstance().reference
             val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
-            val profileImageRef = storageRef.child("users/$currentUserId/profile.jpg")
+            val profileImageRef = storageRef.child("companies/$currentUserId/profile.jpg")
 
             profileImageRef.putFile(imageUri!!)
                 .addOnSuccessListener {
-                    // Get the download URL and save it to Firebase Database
+                    // Get the download URL and save it to Firestore
                     profileImageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                        saveImageLinkToDatabase(downloadUrl.toString())
+                        saveImageLinkToFirestore(downloadUrl.toString())
                     }
                 }
                 .addOnFailureListener { exception ->
@@ -172,12 +177,13 @@ class CompanyProfile : Fragment() {
         }
     }
 
-    // Save image URL in Firebase Database
-    private fun saveImageLinkToDatabase(imageUrl: String) {
+    // Save image URL in Firestore
+    private fun saveImageLinkToFirestore(imageUrl: String) {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val databaseRef = FirebaseDatabase.getInstance().getReference("companies/$currentUserId")
+        val firestore = FirebaseFirestore.getInstance()
+        val companyRef = firestore.collection("companies").document(currentUserId)
 
-        databaseRef.child("companyImage").setValue(imageUrl)
+        companyRef.update("companyImage", imageUrl)
             .addOnSuccessListener {
                 Toast.makeText(requireContext(), "Profile picture updated successfully", Toast.LENGTH_SHORT).show()
                 startActivity(Intent(requireContext(), MainActivity::class.java))

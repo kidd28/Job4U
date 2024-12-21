@@ -2,6 +2,7 @@ package com.project.job4u.Authentication
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -110,30 +111,22 @@ class ApplicantSignUp : AppCompatActivity() {
         auth.signInWithCredential(credential)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
-                    // Sign-in success, check if the user is new or existing
+                    // Sign in success
                     val user = auth.currentUser
-                    val isNewUser = isNewUser(user)
-                    if (isNewUser) {
-                        startActivity(Intent(this, ApplicantInfo::class.java))
-                        finish()
-                    } else {
-                        Toast.makeText(this, "Sign in successful!", Toast.LENGTH_SHORT).show()
-                        startActivity(Intent(this, MainActivity::class.java))
-                    }
+                    checkUserStatus(task.result?.additionalUserInfo?.isNewUser, user)
                 } else {
-                    Toast.makeText(this, "Authentication failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                    Log.w("SignIn", "signInWithCredential:failure", task.exception)
                 }
             }
     }
-
-    // Function to check if the user is new or existing
-    private fun isNewUser(user: FirebaseUser?): Boolean {
-        return user?.metadata?.creationTimestamp == user?.metadata?.lastSignInTimestamp
+    private fun checkUserStatus(isNewUser: Boolean?, user: FirebaseUser?) {
+        if (isNewUser == true) {
+            startActivity(Intent(this, ApplicantInfo::class.java))
+            finish()
+        } else {
+            startActivity(Intent(this, MainActivity::class.java))
+        }
     }
-
-
-
-
 
     private fun signUpUser(email: String, password: String) {
         // Sign up with Firebase Authentication
