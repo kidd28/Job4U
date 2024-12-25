@@ -27,8 +27,7 @@ import com.project.job4u.R
 
 class EmployerSignUp : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
-    private lateinit var googleSignInClient: GoogleSignInClient
-    private val RC_SIGN_IN = 9001 // Request code for sign-in
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -39,19 +38,12 @@ class EmployerSignUp : AppCompatActivity() {
             insets
         }
 
-        // Configure Google SignIn
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getString(R.string.default_web_client_id)) // Use your web client ID
-            .requestEmail()
-            .build()
-
-        googleSignInClient = GoogleSignIn.getClient(this, gso)
         val signIn: TextView = findViewById(R.id.sign_in_link)
         val sign_up_button: Button = findViewById(R.id.sign_up_button)
         val email_input: EditText = findViewById(R.id.email_input)
         val password_input: EditText = findViewById(R.id.password_input)
         val confirm_password_input: EditText = findViewById(R.id.confirm_password_input)
-        val google_signin: MaterialButton = findViewById(R.id.google_signin)
+
 
         signIn.setOnClickListener {  // Start SignInActivity when the button is clicked
             val intent = Intent(this, EmployerSignIn::class.java)
@@ -61,9 +53,7 @@ class EmployerSignUp : AppCompatActivity() {
 
         // Initialize Firebase Auth
         auth = FirebaseAuth.getInstance()
-        google_signin.setOnClickListener {
-            signIn()
-        }
+
         sign_up_button.setOnClickListener {
             // Get the email, password, and confirm password from input fields
             val email = email_input.text.toString().trim()
@@ -86,50 +76,7 @@ class EmployerSignUp : AppCompatActivity() {
             signUpUser(email, password)
         }
     }
-    // Google Sign-In function
-    private fun signIn() {
-        val signInIntent = googleSignInClient.signInIntent
-        startActivityForResult(signInIntent, RC_SIGN_IN)
-    }
-    // Handle the result of the Google Sign-In Intent
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
 
-        // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...)
-        if (requestCode == RC_SIGN_IN) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-            try {
-                // Google Sign In was successful, authenticate with Firebase
-                val account = task.getResult(ApiException::class.java)
-                firebaseAuthWithGoogle(account!!)
-            } catch (e: ApiException) {
-                // Google Sign-In failed, update UI appropriately
-                Toast.makeText(this, "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    // Firebase authentication with Google Sign-In token
-    private fun firebaseAuthWithGoogle(account: GoogleSignInAccount) {
-        val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-        auth.signInWithCredential(credential)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    // Sign in success
-                    val user = auth.currentUser
-                    checkUserStatus(task.result?.additionalUserInfo?.isNewUser, user)
-                } else {
-                    Log.w("SignIn", "signInWithCredential:failure", task.exception)
-                }
-            }
-    }
-    private fun checkUserStatus(isNewUser: Boolean?, user: FirebaseUser?) {
-        if (isNewUser == true) {
-            startActivity(Intent(this, CompanyInfo::class.java))
-            finish()
-        } else {
-            startActivity(Intent(this, MainActivity::class.java))
-        }
-    }
     private fun signUpUser(email: String, password: String) {
         // Sign up with Firebase Authentication
         auth.createUserWithEmailAndPassword(email, password)

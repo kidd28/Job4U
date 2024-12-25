@@ -39,11 +39,11 @@ class SavedAdapter(
         private val tvApplicationStatus: TextView = itemView.findViewById(R.id.status)
 
         fun bind(savedJob: Application) {
-            tvJobTitle.text = savedJob.jobTitle
-            tvCompanyName.text = savedJob.companyName
+            tvJobTitle.text = savedJob.job_title
+            tvCompanyName.text = savedJob.company_name
             tvLocation.text = savedJob.location
             tvPostedOn.text = savedJob.postedOn
-            tvApplicationStatus.text = savedJob.applicationStatus // Show saved status
+            tvApplicationStatus.text = savedJob.application_status // Show saved status
         }
     }
 }

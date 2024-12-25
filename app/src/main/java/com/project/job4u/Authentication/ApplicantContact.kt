@@ -134,7 +134,7 @@ class ApplicantContact : AppCompatActivity() {
         val userId = auth.currentUser?.uid ?: return showToast("User is not signed in")
 
         // Upload user data to Firestore
-        firestore.collection("users").document(userId).update(userData)
+        firestore.collection("tbl_users").document(userId).update(userData)
             .addOnSuccessListener {
                 startActivity(Intent(this, MainActivity::class.java))
             }
@@ -179,10 +179,10 @@ class ApplicantContact : AppCompatActivity() {
 
     private fun saveFileLinkToFirestore(userId: String, fileUrl: String, fileName: String) {
         val userData = mapOf(
-            "resume" to fileUrl,
+            "resume_url" to fileUrl,
             "fileName" to fileName
         )
-        firestore.collection("users").document(userId).update(userData)
+        firestore.collection("tbl_users").document(userId).update(userData)
             .addOnSuccessListener {
                 showToast("Resume link saved successfully!")
             }

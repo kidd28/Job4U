@@ -53,45 +53,46 @@ class ApplicantDetailsActivity : AppCompatActivity() {
         val applicantDetails = intent.getParcelableExtra<Application>("applicantDetails")
 
         if (applicantDetails != null) {
-            tvJobTitle.text = applicantDetails.jobTitle
+            tvJobTitle.text = applicantDetails.job_title
             tvDescription.text = applicantDetails.description
-            tvDateApplied.text = applicantDetails.postedOn
+            tvDateApplied.text = applicantDetails.applied_on
             tvApplicantName.text = applicantDetails.applicantName
             tvApplicantEmail.text = applicantDetails.applicantEmail
             tvApplicantPhone.text = applicantDetails.applicantPhone
-            tvStatus.text = applicantDetails.applicationStatus
+            tvStatus.text = applicantDetails.application_status
         }
 
         btnResume.setOnClickListener {
             val intent = Intent(this, ResumePreview::class.java)
             if (applicantDetails != null) {
                 intent.putExtra("resume", applicantDetails.applicantResume)
+                intent.putExtra("applicantuserId", applicantDetails.user_id)
             }
             startActivity(intent)
         }
         btnChangeStatus.setOnClickListener {
             if (applicantDetails != null) {
-                showStatusUpdateDialog(applicantDetails.userId, applicantDetails.jobId)
+                showStatusUpdateDialog(applicantDetails.user_id, applicantDetails.job_id)
             }
         }
 
     }
 
-    private fun showStatusUpdateDialog(applicantId: String, jobId: String) {
+    private fun showStatusUpdateDialog(applicantId: String, job_id: String) {
         val dialogBuilder = AlertDialog.Builder(this)
         dialogBuilder.setTitle("Update Application Status")
         dialogBuilder.setMessage("Choose the status for this applicant.")
 
         dialogBuilder.setPositiveButton("Accept") { _, _ ->
-            updateApplicationStatus(applicantId, jobId, "Accepted")
+            updateApplicationStatus(applicantId, job_id, "Accepted")
         }
 
         dialogBuilder.setNegativeButton("Interview") { _, _ ->
-            updateApplicationStatus(applicantId, jobId, "Interview")
+            updateApplicationStatus(applicantId,job_id , "Interview")
         }
 
         dialogBuilder.setNeutralButton("Decline") { dialog, _ ->
-            updateApplicationStatus(applicantId, jobId, "Declined")
+            updateApplicationStatus(applicantId, job_id, "Declined")
             dialog.dismiss()
         }
 
@@ -99,11 +100,11 @@ class ApplicantDetailsActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun updateApplicationStatus(userId: String, jobId: String, status: String) {
+    private fun updateApplicationStatus(userId: String, job_id: String, status: String) {
         // Query to find the application based on userId and jobId
-        val applicationRef = firestore.collection("applications")
-            .whereEqualTo("userId", userId) // Find by userId
-            .whereEqualTo("jobId", jobId)   // Find by jobId
+        val applicationRef = firestore.collection("tbl_applications")
+            .whereEqualTo("user_id", userId) // Find by userId
+            .whereEqualTo("job_id", job_id)   // Find by jobId
             .limit(1) // Ensure only one result is returned (since userId + jobId should be unique)
 
         // Fetch the application document
@@ -113,9 +114,9 @@ class ApplicantDetailsActivity : AppCompatActivity() {
                 val applicationId = applicationDoc.id // Get the applicationId (document ID)
 
                 // Update the application status
-                firestore.collection("applications")
+                firestore.collection("tbl_applications")
                     .document(applicationId) // Use the applicationId to update the correct document
-                    .update("applicationStatus", status)
+                    .update("application_status", status)
                     .addOnSuccessListener {
                         Toast.makeText(this, "Application status updated to $status", Toast.LENGTH_SHORT)
                             .show()

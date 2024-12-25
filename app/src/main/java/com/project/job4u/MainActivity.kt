@@ -12,18 +12,18 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.DocumentSnapshot
-import com.project.job4u.Authentication.SignInActivity
 import com.project.job4u.ApplicantFragments.ApplicationsFragment
 import com.project.job4u.ApplicantFragments.HomeFragment
-import com.project.job4u.ApplicantFragments.SavedFragment
 import com.project.job4u.ApplicantFragments.ProfileFragment
+import com.project.job4u.ApplicantFragments.SavedFragment
+import com.project.job4u.Authentication.SignInActivity
 import com.project.job4u.EmployerFragments.Applications
 import com.project.job4u.EmployerFragments.CompanyProfile
 import com.project.job4u.EmployerFragments.JobPosted
@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         // Initialize Firebase Auth and Firestore
         auth = FirebaseAuth.getInstance()
         firestore = FirebaseFirestore.getInstance()
-        usersRef = firestore.collection("users")
+        usersRef = firestore.collection("tbl_users")
         employersRef = firestore.collection("companies")
         bottomNav = findViewById(R.id.bottom_nav)
 
@@ -81,12 +81,7 @@ class MainActivity : AppCompatActivity() {
 
         if (currentUser != null) {
             checkUserType(currentUser)
-            // User is signed in, fetch their name from Firestore
-            toolbarButton.setOnClickListener {
-                // Start SignInActivity when the button is clicked
-                val intent = Intent(this, SignInActivity::class.java)
-                startActivity(intent)
-            }
+
         } else {
             // User is not signed in, show "Sign In"
             showApplicantDashboard()
@@ -109,6 +104,7 @@ class MainActivity : AppCompatActivity() {
                     showEmployerDashboard()
                     fetchCompanyName(currentUserId)
                     if (currentUser != null) {
+
                         fetchCompanyName(currentUser.uid)
                     }
                 } else {
@@ -139,14 +135,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadFragment(fragment: Fragment) {
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .commit()
+        val fragmentManager: FragmentManager = supportFragmentManager
+        if(!fragmentManager.isDestroyed){
+            fragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commit()
+        }
+
     }
 
     private fun fetchUserName(userId: String) {
         // Reference to the user's data in Firestore
-        val userRef = firestore.collection("users").document(userId)
+        val userRef = firestore.collection("tbl_users").document(userId)
 
         userRef.get().addOnSuccessListener { document ->
             if (document.exists()) {
@@ -168,10 +168,9 @@ class MainActivity : AppCompatActivity() {
     private fun fetchCompanyName(companyId: String) {
         // Reference to the company's data in Firestore
         val companyRef = firestore.collection("companies").document(companyId)
-
         companyRef.get().addOnSuccessListener { document ->
             if (document.exists()) {
-                val companyName = document.getString("companyName")
+                val companyName = document.getString("company_name")
                 toolbarButton.text = companyName
                 toolbarButton.setOnClickListener {
                     val i = Intent(this@MainActivity, Settings::class.java)
@@ -185,17 +184,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showEmployerDashboard() {
-        loadFragment(JobPosted())
+    loadFragment(JobPosted())
         bottomNav.menu.clear()
         bottomNav.inflateMenu(R.menu.bottom_nav_menu_employer)  // Inflate employer menu
-        bottomNav.setOnNavigationItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_job_posted -> loadFragment(JobPosted())
-                R.id.nav_post_job -> loadFragment(PostJob())
-                R.id.nav_applications -> loadFragment(Applications())
-                R.id.nav_profile -> loadFragment(CompanyProfile())
+        bottomNav.setOnNavigationItemSelectedListener { menuItem ->
+            val selectedFragment = when (menuItem.itemId) {
+                R.id.nav_job_posted -> JobPosted()
+                R.id.nav_post_job -> PostJob()
+                R.id.nav_applications -> Applications()
+                R.id.nav_profile -> CompanyProfile()
                 else -> JobPosted()
             }
+            loadFragment(selectedFragment)
             true
         }
     }

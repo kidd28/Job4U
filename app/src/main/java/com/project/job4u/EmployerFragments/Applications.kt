@@ -87,7 +87,7 @@ class Applications : Fragment() {
         }
 
         // Reference to the applications collection in Firestore
-        val applicationsRef = firestore.collection("applications")
+        val applicationsRef = firestore.collection("tbl_applications")
 
         // Query for applications where the postedBy matches the companyId (current signed-in user)
         applicationsRef

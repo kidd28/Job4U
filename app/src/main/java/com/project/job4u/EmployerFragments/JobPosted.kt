@@ -98,7 +98,7 @@ class JobPosted : Fragment() {
         val companyId = auth.currentUser?.uid ?: return  // Ensure the user is logged in
 
         // Query Firestore to fetch jobs posted by the current company (where postedBy == companyId)
-        db.collection("jobPosts")
+        db.collection("tbl_job_listings")
             .whereEqualTo("postedBy", companyId)
             .get()
             .addOnSuccessListener { snapshot ->
@@ -115,14 +115,14 @@ class JobPosted : Fragment() {
                 // Filter job list based on the search query (case-insensitive)
                 if (searchQuery.isNotEmpty()) {
                     val filteredJobList = jobList.filter { job ->
-                        job.jobTitle.lowercase().contains(searchQuery.lowercase())  // Case-insensitive comparison
+                        job.job_title.lowercase().contains(searchQuery.lowercase())  // Case-insensitive comparison
                     }
                     jobList.clear()
                     jobList.addAll(filteredJobList)
                 }
 
                 // Sort the job list by jobId or postedOn in descending order
-                jobList.sortByDescending { it.jobId }
+                jobList.sortByDescending { it.job_id }
 
                 // Notify the adapter that data has changed
                 jobAdapter.notifyDataSetChanged()

@@ -35,11 +35,12 @@ class ResumePreview : AppCompatActivity() {
 
         pdfImageView = findViewById(R.id.pdfImageView)
 
-        val userId = FirebaseAuth.getInstance().currentUser?.uid
-        val resumeId = intent.getStringExtra("resumeId")
 
-        if (userId != null && resumeId != null) {
-            fetchResumeUrl(userId, resumeId)
+        val resumeId = intent.getStringExtra("resume")
+        val  applicantuserId = intent.getStringExtra("applicantuserId")
+
+        if (applicantuserId != null && resumeId != null) {
+            fetchResumeUrl(applicantuserId, resumeId)
         } else {
             Toast.makeText(this, "No resume data available", Toast.LENGTH_SHORT).show()
         }
@@ -47,12 +48,12 @@ class ResumePreview : AppCompatActivity() {
 
     private fun fetchResumeUrl(userId: String, resumeId: String) {
         // Fetch the resume document from Firestore
-        val resumeRef = firestore.collection("users").document(userId).collection("resumes").document(resumeId)
+        val resumeRef = firestore.collection("tbl_users").document(userId)
 
         resumeRef.get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
-                    val pdfUrl = document.getString("resumeUrl")
+                    val pdfUrl = document.getString("resume_url").toString()
                     if (pdfUrl != null) {
                         downloadAndRenderPdf(pdfUrl)
                     } else {

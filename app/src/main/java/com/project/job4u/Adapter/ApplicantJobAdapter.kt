@@ -40,8 +40,8 @@ class ApplicantJobAdapter(private val jobList: List<Job>,
         private val status: TextView = itemView.findViewById(R.id.status)
 
         fun bind(job: Job) {
-            tvJobTitle.text = job.jobTitle
-            tvCompanyName.text = job.companyName
+            tvJobTitle.text = job.job_title
+            tvCompanyName.text = job.company_name
             tvLocation.text = job.city+", "+ job.state
             tvPostedOn.text = job.postedOn
             status.visibility = View.GONE

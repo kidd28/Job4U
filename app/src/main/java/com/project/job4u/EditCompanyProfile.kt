@@ -75,7 +75,7 @@ class EditCompanyProfile : AppCompatActivity() {
             .addOnSuccessListener { document ->
                 if (document.exists()) {
                     // Retrieve current company data
-                    val companyName = document.getString("companyName")
+                    val companyName = document.getString("company_name")
                     val companyEmail = document.getString("companyEmail")
                     val companyPhone = document.getString("companyPhone")
                     val companyDescription = document.getString("companyDescription")
@@ -133,7 +133,7 @@ class EditCompanyProfile : AppCompatActivity() {
     }
 
     private fun saveProfile() {
-        val companyName = companyNameEditText.text.toString().trim()
+        val company_name = companyNameEditText.text.toString().trim()
         val companyEmail = companyEmailEditText.text.toString().trim()
         val companyPhone = companyPhoneEditText.text.toString().trim()
         val companyDescription = companyDescriptionEditText.text.toString().trim()
@@ -149,7 +149,7 @@ class EditCompanyProfile : AppCompatActivity() {
             val companyRef = db.collection("companies").document(userId)
 
             val companyUpdates = mapOf(
-                "companyName" to companyName,
+                "company_name" to company_name,
                 "companyEmail" to companyEmail,
                 "companyPhone" to companyPhone,
                 "companyDescription" to companyDescription,

@@ -117,7 +117,7 @@ class EditUserProfile : AppCompatActivity() {
             return
         }
 
-        firestore.collection("users").document(userId).get()
+        firestore.collection("tbl_users").document(userId).get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
                     val firstName = document.getString("firstname")
@@ -226,7 +226,7 @@ class EditUserProfile : AppCompatActivity() {
                 "gender" to gender
             )
 
-            firestore.collection("users").document(userId).update(userProfile)
+            firestore.collection("tbl_users").document(userId).update(userProfile)
                 .addOnSuccessListener {
                     Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show()
                     val intent = Intent(this, MainActivity::class.java)
@@ -265,7 +265,11 @@ class EditUserProfile : AppCompatActivity() {
                         val userId = FirebaseAuth.getInstance().currentUser?.uid
                         if (userId != null) {
                             val resumeUrl = fileRef.downloadUrl.toString()
-                            firestore.collection("users").document(userId).update("fileName", resumeUrl)
+                            val userData = mapOf(
+                                "resume_url" to resumeUrl,
+                                "fileName" to fileName
+                            )
+                            firestore.collection("tbl_users").document(userId).update(userData)
                         }
                     }
                     .addOnFailureListener {

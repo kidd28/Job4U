@@ -5,9 +5,9 @@ import kotlinx.android.parcel.Parcelize
 
 @Parcelize
 data class Job(
-    val jobTitle: String = "",
-    val jobId: String = "",
-    val companyName: String = "",
+    val job_title: String = "",
+    val job_id: String = "",
+    val company_name: String = "",
     val jobDescription: String = "",
     val city: String = "",
     val state: String = "",

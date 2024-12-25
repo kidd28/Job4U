@@ -62,7 +62,7 @@ class PostJob : Fragment() {
 
             companyRef.get().addOnSuccessListener { document ->
                 if (document.exists()) {
-                    val companyName = document.getString("companyName")
+                    val companyName = document.getString("company_name")
                     if (companyName != null) {
                         etCompanyName.setText(companyName)
                         etCompanyName.isEnabled = false
@@ -90,13 +90,13 @@ class PostJob : Fragment() {
                 Toast.makeText(requireContext(), "All fields are required", Toast.LENGTH_SHORT).show()
             } else {
                 // Use currentTimeMillis for unique jobId
-                val jobId = System.currentTimeMillis().toString()
+                val job_id = System.currentTimeMillis().toString()
                 val currentDate = SimpleDateFormat("MM-dd-yyyy", Locale.getDefault()).format(Date())
 
                 val jobData = hashMapOf(
-                    "jobId" to jobId,
-                    "jobTitle" to jobTitle,
-                    "companyName" to companyName,
+                    "job_id" to job_id,
+                    "job_title" to jobTitle,
+                    "company_name" to companyName,
                     "jobDescription" to jobDescription,
                     "requirements" to requirements,
                     "city" to city,
@@ -109,7 +109,7 @@ class PostJob : Fragment() {
                 )
 
                 // Add job data to Firestore collection "jobPosts"
-                db.collection("jobPosts").document(jobId)
+                db.collection("tbl_job_listings").document(job_id)
                     .set(jobData)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {

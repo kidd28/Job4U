@@ -112,9 +112,13 @@ class ApplicantInfo : AppCompatActivity() {
     }
 
     private fun uploadUserData() {
+        // Get the current user from Firebase Authentication
+        val userId = auth.currentUser?.uid ?: return showToast("User is not signed in")
+
         // Get user data from the input fields
         val fname = fnameInput.text.toString()
         val lname = lnameInput.text.toString()
+        val name = fnameInput.text.toString() +" "+lnameInput.text.toString()
         val email = emailInput.text.toString()
         val dob = dobInput.text.toString()
 
@@ -123,14 +127,14 @@ class ApplicantInfo : AppCompatActivity() {
             "firstname" to fname,
             "lastname" to lname,
             "email" to email,
+            "name" to name,
+            "user_id" to userId,
             "dob" to dob,
         )
 
-        // Get the current user from Firebase Authentication
-        val userId = auth.currentUser?.uid ?: return showToast("User is not signed in")
 
         // Upload user data to Firestore in the "users" collection
-        firestore.collection("users").document(userId).set(userData)
+        firestore.collection("tbl_users").document(userId).set(userData)
             .addOnSuccessListener {
                 startActivity(Intent(this, ApplicantContact::class.java))
             }

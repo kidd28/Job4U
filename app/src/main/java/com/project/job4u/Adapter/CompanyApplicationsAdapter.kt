@@ -39,10 +39,10 @@ class CompanyApplicationsAdapter(
         private val tvStatus: TextView = itemView.findViewById(R.id.tvStatus)
 
         fun bind(application: Application) {
-            tvJobTitle.text = application.jobTitle
+            tvJobTitle.text = application.job_title
             tvApplicantName.text = application.applicantName
             tvApplicantEmail.text = application.applicantEmail
-            tvStatus.text = application.applicationStatus
+            tvStatus.text = application.application_status
         }
     }
 }

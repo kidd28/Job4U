@@ -31,7 +31,7 @@ class ApplicantJobDetails : AppCompatActivity() {
 
     private lateinit var db: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
-    private lateinit var jobId: String
+    private lateinit var job_id: String
     private lateinit var status: String
 
     private lateinit var withdrawButton: MaterialButton
@@ -69,29 +69,29 @@ class ApplicantJobDetails : AppCompatActivity() {
 
         if (job != null) {
             // Set the data in the TextViews
-            jobTitleText.text = job.jobTitle
-            companyNameText.text = job.companyName
+            jobTitleText.text = job.job_title
+            companyNameText.text = job.company_name
             jobDescriptionText.text = job.jobDescription
             jobLocationText.text = "${job.city}, ${job.state}"
             salaryText.text = job.salary
             jobTypeText.text = job.jobType
             requirementsText.text = job.requirements
             postedOnText.text = job.postedOn
-            jobId = job.jobId
+            job_id = job.job_id
             status = job.status
         }
         if (applicationDetails != null) {
             // Set the data in the TextViews
-            jobTitleText.text = applicationDetails.jobTitle
-            companyNameText.text = applicationDetails.companyName
+            jobTitleText.text = applicationDetails.job_title
+            companyNameText.text = applicationDetails.company_name
             jobDescriptionText.text = applicationDetails.description
             jobLocationText.text = applicationDetails.location
             salaryText.text = applicationDetails.salary
             requirementsText.text = applicationDetails.requirements
             postedOnText.text = applicationDetails.postedOn
 
-            jobId = applicationDetails.jobId
-            status = applicationDetails.applicationStatus
+            job_id = applicationDetails.job_id
+            status = applicationDetails.application_status
         }
 
         // Get references to buttons
@@ -107,11 +107,13 @@ class ApplicantJobDetails : AppCompatActivity() {
             withdrawButton.visibility = View.GONE
             applyButton.visibility = View.GONE
             saveButton.visibility = View.GONE
+            unsaveButton.visibility = View.GONE
             sign_in.visibility = View.VISIBLE
         } else {
             withdrawButton.visibility = View.VISIBLE
             applyButton.visibility = View.VISIBLE
             saveButton.visibility = View.VISIBLE
+            unsaveButton.visibility = View.VISIBLE
             sign_in.visibility = View.GONE
         }
 
@@ -149,7 +151,7 @@ class ApplicantJobDetails : AppCompatActivity() {
 
     private fun Unsave() {
         val userId = auth.currentUser?.uid ?: return
-        db.collection("savedJobs").document(userId).collection("jobs").document(jobId).delete().addOnSuccessListener {
+        db.collection("savedJobs").document(userId).collection("jobs").document(job_id).delete().addOnSuccessListener {
                 // Job is saved, show "Saved" on button
                 saveButton.visibility = View.VISIBLE
                 unsaveButton.visibility = View.GONE
@@ -163,7 +165,7 @@ class ApplicantJobDetails : AppCompatActivity() {
         val userId = auth.currentUser?.uid ?: return
 
         // Check if the jobId is in the user's jobApplied node
-        db.collection("users").document(userId).collection("jobApplied").document(jobId)
+        db.collection("tbl_users").document(userId).collection("jobApplied").document(job_id)
             .get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
@@ -181,7 +183,7 @@ class ApplicantJobDetails : AppCompatActivity() {
             }
 
         // Check if the job is saved
-        db.collection("savedJobs").document(userId).collection("jobs").document(jobId)
+        db.collection("savedJobs").document(userId).collection("jobs").document(job_id)
             .get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
@@ -220,56 +222,57 @@ class ApplicantJobDetails : AppCompatActivity() {
 
     private fun applyForJob(job: Job) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return // Ensure the user is logged in
-        val jobId = job.jobId // Ensure that job has a jobId property
+        val job_id = job.job_id // Ensure that job has a jobId property
 
         // Get the current date in the format "MM-dd-yyyy"
         val dateFormat = SimpleDateFormat("MM-dd-yyyy", Locale.getDefault())
         val currentDate = dateFormat.format(Date())
 
         // Fetch the user's name and email from the "users" node
-        val userRef = FirebaseFirestore.getInstance().collection("users").document(userId)
+        val userRef = FirebaseFirestore.getInstance().collection("tbl_users").document(userId)
         userRef.get()
             .addOnSuccessListener { document ->
                 val firstname = document.getString("firstname") ?: "Unknown"
                 val lastname = document.getString("lastname") ?: "Unknown"
                 val applicantEmail = document.getString("email") ?: "Unknown"
-                val applicantResume = document.getString("resume") ?: "Unknown"
+                val applicantResume = document.getString("resume_url") ?: "Unknown"
                 val applicantPhone = document.getString("phone") ?: "Unknown"
-
+// Generate applicationId using current timestamp
+                val applicationId = System.currentTimeMillis().toString()
                 // Create an Application map with the necessary job details and user information
                 val applicationData = hashMapOf(
-                    "jobId" to jobId,
-                    "jobTitle" to job.jobTitle,
-                    "companyName" to job.companyName,
+                    "job_id" to job_id,
+                    "job_title" to job.job_title,
+                    "company_name" to job.company_name,
                     "location" to "${job.city}, ${job.state}",
                     "description" to job.jobDescription,
                     "salary" to job.salary,
                     "requirements" to job.requirements,
                     "postedOn" to job.postedOn,
-                    "applicationStatus" to "applied", // Initial status is "applied"
-                    "date" to currentDate,
-                    "userId" to userId,
+                    "application_status" to "applied", // Initial status is "applied"
+                    "applied_on" to currentDate,
+                    "user_id" to userId,
                     "postedBy" to job.postedBy,
                     "applicantName" to "$firstname $lastname",
                     "applicantEmail" to applicantEmail,
                     "applicantResume" to applicantResume,
-                    "applicantPhone" to applicantPhone
+                    "applicantPhone" to applicantPhone,
+                    "application_id" to applicationId
                 )
 
-                // Generate applicationId using current timestamp
-                val applicationId = System.currentTimeMillis().toString()
+
 
                 // Save the application to Firestore under the path: applications > applicationId
-                FirebaseFirestore.getInstance().collection("applications")
+                FirebaseFirestore.getInstance().collection("tbl_applications")
                     .document(applicationId) // Use generated timestamp as document ID
                     .set(applicationData)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             // Optionally, add jobId under the "jobApplied" collection in the user's node
-                            FirebaseFirestore.getInstance().collection("users")
+                            FirebaseFirestore.getInstance().collection("tbl_users")
                                 .document(userId)
                                 .collection("jobApplied") // Subcollection to track applied jobs
-                                .document(jobId) // Save jobId as document ID
+                                .document(job_id) // Save jobId as document ID
                                 .set(mapOf("applied" to true))
 
                             val intent = Intent(this@ApplicantJobDetails, MainActivity::class.java)
@@ -288,24 +291,23 @@ class ApplicantJobDetails : AppCompatActivity() {
 
     private fun saveJob(job: Job?) {
         val userId = auth.currentUser?.uid ?: return
-        val jobId = job?.jobId ?: return
+        val job_id = job?.job_id ?: return
 
         // Save job details under the savedJobs collection
         val savedJob = Application(
-            jobId = jobId,
-            jobTitle = job?.jobTitle ?: "",
-            companyName = job?.companyName ?: "",
+            job_id = job_id,
+            job_title = job?.job_title ?: "",
             location = "${job?.city}, ${job?.state}",
             description = job?.jobDescription ?: "",
             salary = job?.salary ?: "",
             requirements = job?.requirements ?: "",
             postedOn = job?.postedOn ?: "",
-            applicationStatus = "saved", // Mark as saved
-            date = SimpleDateFormat("MM-dd-yyyy", Locale.getDefault()).format(Date())
+            application_status = "saved", // Mark as saved
+            applied_on = SimpleDateFormat("MM-dd-yyyy", Locale.getDefault()).format(Date())
         )
 
         // Save the job in the savedJobs collection
-        db.collection("savedJobs").document(userId).collection("jobs").document(jobId).set(savedJob)
+        db.collection("savedJobs").document(userId).collection("jobs").document(job_id).set(savedJob)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     saveButton.text = "Saved"
@@ -321,10 +323,10 @@ class ApplicantJobDetails : AppCompatActivity() {
 
     private fun saveJob(application: Application?) {
         val userId = auth.currentUser?.uid ?: return
-        val jobId = application?.jobId ?: return
+        val job_id = application?.job_id ?: return
 
         // Save the application as saved
-        db.collection("savedJobs").document(userId).collection("jobs").document(jobId)
+        db.collection("savedJobs").document(userId).collection("jobs").document(job_id)
             .set(application!!)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -360,9 +362,9 @@ class ApplicantJobDetails : AppCompatActivity() {
         val userId = auth.currentUser?.uid ?: return
 
         // Reference to the application in the "applications" collection using applicationId (timestamp)
-        val applicationRef = db.collection("applications")
-            .whereEqualTo("userId", userId) // Find the application by userId
-            .whereEqualTo("jobId", jobId) // and jobId to ensure it's the correct application
+        val applicationRef = db.collection("tbl_applications")
+            .whereEqualTo("user_id", userId) // Find the application by userId
+            .whereEqualTo("job_id", job_id) // and jobId to ensure it's the correct application
             .limit(1) // To ensure we get only one application
 
         // Fetch the application document
@@ -372,16 +374,16 @@ class ApplicantJobDetails : AppCompatActivity() {
                 val applicationId = applicationDoc.id // Get the applicationId (document ID)
 
                 // Delete the application document using the applicationId
-                db.collection("applications")
+                db.collection("tbl_applications")
                     .document(applicationId)
                     .delete()
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             // Reference to the user's jobApplied document
-                            val userJobAppliedRef = db.collection("users")
+                            val userJobAppliedRef = db.collection("tbl_users")
                                 .document(userId)
                                 .collection("jobApplied")
-                                .document(jobId)
+                                .document(job_id)
 
                             // Remove the jobId from the "jobApplied" collection
                             userJobAppliedRef.delete().addOnCompleteListener { innerTask ->

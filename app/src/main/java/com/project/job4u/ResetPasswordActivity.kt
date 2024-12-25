@@ -41,7 +41,6 @@ class ResetPasswordActivity : AppCompatActivity() {
                 Toast.makeText(this, "Please enter your email", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
             // Send password reset email
             auth.sendPasswordResetEmail(email)
                 .addOnCompleteListener { task ->

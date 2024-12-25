@@ -27,7 +27,7 @@ class JobDetailsActivity : AppCompatActivity() {
 
     private lateinit var firestore: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
-    private lateinit var jobId: String // Job ID passed via intent
+    private lateinit var job_id: String // Job ID passed via intent
     private lateinit var status: String // Job ID passed via intent
 
     private lateinit var deleteButton: MaterialButton
@@ -62,8 +62,8 @@ class JobDetailsActivity : AppCompatActivity() {
 
         if (job != null) {
             // Set the data in the TextViews
-            jobTitleText.text = job.jobTitle
-            companyNameText.text = job.companyName
+            jobTitleText.text = job.job_title
+            companyNameText.text = job.company_name
             jobDescriptionText.text = job.jobDescription
             jobLocationText.text = "${job.city}, ${job.state}"
             salaryText.text = job.salary
@@ -71,7 +71,7 @@ class JobDetailsActivity : AppCompatActivity() {
             requirementsText.text = job.requirements
             postedOnText.text = job.postedOn
 
-            jobId = job.jobId
+            job_id = job.job_id
             status = job.status
         }
 
@@ -90,58 +90,58 @@ class JobDetailsActivity : AppCompatActivity() {
 
         // Open Job (Activate Job)
         open_button.setOnClickListener {
-            showOpenConfirmationDialog(jobId)
+            showOpenConfirmationDialog(job_id)
         }
         // Delete Job
         deleteButton.setOnClickListener {
-            showDeleteConfirmationDialog(jobId)
+            showDeleteConfirmationDialog(job_id)
         }
 
         // Close Job
         closeButton.setOnClickListener {
-            showCloseConfirmationDialog(jobId)
+            showCloseConfirmationDialog(job_id)
         }
     }
 
-    private fun showDeleteConfirmationDialog(jobId: String) {
+    private fun showDeleteConfirmationDialog(job_id: String) {
         // Create the Delete confirmation dialog
         AlertDialog.Builder(this)
             .setTitle("Delete Job")
             .setMessage("Are you sure you want to delete this job? This action cannot be undone.")
             .setPositiveButton("Yes") { _, _ ->
-                deleteJobPost(jobId)
+                deleteJobPost(job_id)
             }
             .setNegativeButton("No", null)
             .show()
     }
 
-    private fun showCloseConfirmationDialog(jobId: String) {
+    private fun showCloseConfirmationDialog(job_id: String) {
         // Create the Close confirmation dialog
         AlertDialog.Builder(this)
             .setTitle("Close Job")
             .setMessage("Are you sure you want to close this job? The job will no longer be open for applicants.")
             .setPositiveButton("Yes") { _, _ ->
-                closeJobPost(jobId)
+                closeJobPost(job_id)
             }
             .setNegativeButton("No", null)
             .show()
     }
 
-    private fun showOpenConfirmationDialog(jobId: String) {
+    private fun showOpenConfirmationDialog(job_id: String) {
         // Create the Open confirmation dialog
         AlertDialog.Builder(this)
             .setTitle("Open Job")
             .setMessage("Are you sure you want to open this job? The job will be active and available for applicants.")
             .setPositiveButton("Yes") { _, _ ->
-                openJobPost(jobId)
+                openJobPost(job_id)
             }
             .setNegativeButton("No", null)
             .show()
     }
 
-    private fun deleteJobPost(jobId: String) {
+    private fun deleteJobPost(job_id: String) {
         // Reference to the job in the Firestore database
-        val jobRef = firestore.collection("jobPosts").document(jobId)
+        val jobRef = firestore.collection("tbl_job_listings").document(job_id)
 
         // Delete the job post entirely
         jobRef.delete().addOnCompleteListener { task ->
@@ -156,9 +156,9 @@ class JobDetailsActivity : AppCompatActivity() {
         }
     }
 
-    private fun closeJobPost(jobId: String) {
+    private fun closeJobPost(job_id: String) {
         // Reference to the job in the Firestore database
-        val jobRef = firestore.collection("jobPosts").document(jobId)
+        val jobRef = firestore.collection("tbl_job_listings").document(job_id)
 
         // Update the status of the job to "closed"
         jobRef.update("status", "closed").addOnCompleteListener { task ->
@@ -173,9 +173,9 @@ class JobDetailsActivity : AppCompatActivity() {
         }
     }
 
-    private fun openJobPost(jobId: String) {
+    private fun openJobPost(job_id: String) {
         // Reference to the job in the Firestore database
-        val jobRef = firestore.collection("jobPosts").document(jobId)
+        val jobRef = firestore.collection("tbl_job_listings").document(job_id)
 
         // Update the status of the job to "active"
         jobRef.update("status", "active").addOnCompleteListener { task ->

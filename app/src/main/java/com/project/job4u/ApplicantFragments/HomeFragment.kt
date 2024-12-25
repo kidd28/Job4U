@@ -80,7 +80,7 @@ class HomeFragment : Fragment() {
     private fun fetchApplicantJobs() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         // Fetch all jobs with active status
-        db.collection("jobPosts")
+        db.collection("tbl_job_listings")
             .whereEqualTo("status", "active")
             .get()
             .addOnSuccessListener { snapshot ->
@@ -98,7 +98,7 @@ class HomeFragment : Fragment() {
                     jobList.addAll(tempJobList)
 
                     // Sort by postedOn date in descending order
-                    jobList.sortByDescending { it.jobId }
+                    jobList.sortByDescending { it.job_id }
                     jobAdapter.notifyDataSetChanged()
                 } else {
                     // User is signed in, filter jobs
@@ -114,25 +114,25 @@ class HomeFragment : Fragment() {
         val jobIdsToHide = mutableSetOf<String>()
 
         // Fetch the jobs the user has applied for from the "applications" collection
-        db.collection("applications")
-            .whereEqualTo("userId", userId) // Query where userId matches the signed-in user's ID
+        db.collection("tbl_applications")
+            .whereEqualTo("user_id", userId) // Query where userId matches the signed-in user's ID
             .get()
             .addOnSuccessListener { applicationsSnapshot ->
                 if (!applicationsSnapshot.isEmpty) {
                     applicationsSnapshot.documents.forEach { applicationSnapshot ->
                         val application = applicationSnapshot.toObject(Application::class.java)
                         if (application != null) {
-                            jobIdsToHide.add(application.jobId) // Add jobId to hide if user has applied
+                            jobIdsToHide.add(application.job_id) // Add jobId to hide if user has applied
                         }
                     }
                 }
 
                 // Filter the jobs to exclude those the user has applied for
                 jobList.clear()
-                jobList.addAll(tempJobList.filter { it.jobId !in jobIdsToHide })
+                jobList.addAll(tempJobList.filter { it.job_id !in jobIdsToHide })
 
                 // Sort by postedOn date in descending order
-                jobList.sortByDescending { it.jobId }
+                jobList.sortByDescending { it.job_id }
                 jobAdapter.notifyDataSetChanged()
             }
             .addOnFailureListener {
@@ -140,19 +140,19 @@ class HomeFragment : Fragment() {
             }
     }
 
-    private fun searchJobs(jobTitle: String) {
+    private fun searchJobs(job_title: String) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId == null) {
-            searchJobsNotSignedin(jobTitle)
+            searchJobsNotSignedin(job_title)
             return
         }
 
         // If the jobTitle is empty, fetch and display all job posts
-        if (jobTitle.isEmpty()) {
+        if (job_title.isEmpty()) {
             fetchApplicantJobs() // If no search term, fetch all jobs
         } else {
             // Firestore query to fetch jobs based on jobTitle
-            db.collection("jobPosts")
+            db.collection("tbl_job_listings")
                 .get()
                 .addOnSuccessListener { snapshot ->
                     val tempJobList = mutableListOf<Job>()
@@ -163,7 +163,7 @@ class HomeFragment : Fragment() {
                         val job = jobSnapshot.toObject(Job::class.java)
 
                         // Check if jobTitle matches part of the job's jobTitle field
-                        if (job?.jobTitle?.lowercase()?.contains(jobTitle.lowercase()) == true) {
+                        if (job?.job_title?.lowercase()?.contains(job_title.lowercase()) == true) {
                             tempJobList.add(job) // Add matching jobs to a temporary list
                         }
                     }
@@ -186,11 +186,11 @@ class HomeFragment : Fragment() {
 
 
 
-    private fun searchJobsNotSignedin(jobTitle: String) {
+    private fun searchJobsNotSignedin(job_title: String) {
         // If the jobTitle is empty, fetch and display all job posts
-        if (jobTitle.isEmpty()) {
+        if (job_title.isEmpty()) {
             // Fetch all job posts when search is empty
-            db.collection("jobPosts")
+            db.collection("tbl_job_listings")
                 .get()
                 .addOnSuccessListener { snapshot ->
                     jobList.clear() // Clear the current job list
@@ -202,7 +202,7 @@ class HomeFragment : Fragment() {
                     }
 
                     // Sort by postedOn date in descending order
-                    jobList.sortByDescending { it.jobId }
+                    jobList.sortByDescending { it.job_id }
                     jobAdapter.notifyDataSetChanged()
                 }
                 .addOnFailureListener { exception ->
@@ -211,7 +211,7 @@ class HomeFragment : Fragment() {
                 }
         } else {
             // Firestore query with client-side filtering if a jobTitle is provided
-            db.collection("jobPosts")
+            db.collection("tbl_job_listings")
                 .get()
                 .addOnSuccessListener { snapshot ->
                     jobList.clear() // Clear the current job list
@@ -221,14 +221,14 @@ class HomeFragment : Fragment() {
                         val job = jobSnapshot.toObject(Job::class.java)
 
                         // Check if jobTitle matches part of the job's jobTitle field
-                        if (job?.jobTitle?.lowercase()?.contains(jobTitle.lowercase()) == true) {
+                        if (job?.job_title?.lowercase()?.contains(job_title.lowercase()) == true) {
                             jobList.add(job)  // Add matching jobs to the jobList
                         }
                     }
 
                     // If there are matching jobs, sort and update UI
                     if (jobList.isNotEmpty()) {
-                        jobList.sortByDescending { it.jobId }
+                        jobList.sortByDescending { it.job_id }
                         jobAdapter.notifyDataSetChanged()
                     } else {
                         // If no results found

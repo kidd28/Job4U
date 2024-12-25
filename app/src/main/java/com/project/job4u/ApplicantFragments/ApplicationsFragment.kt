@@ -89,8 +89,8 @@ class ApplicationsFragment : Fragment() {
         not_signed_in.visibility = View.GONE
 
         // Reference to the applications collection
-        val applicationsRef = db.collection("applications")
-            .whereEqualTo("userId", userId)  // Query to fetch only applications by the current user
+        val applicationsRef = db.collection("tbl_applications")
+            .whereEqualTo("user_id", userId)  // Query to fetch only applications by the current user
 
         // Fetch the applications where the user is the applicant
         applicationsRef.get().addOnSuccessListener { querySnapshot ->
@@ -104,10 +104,10 @@ class ApplicationsFragment : Fragment() {
                     Log.d("FirestoreDebug", "Application details: $application")
 
                     // Fetch job details for each application (you can modify this to match your needs)
-                    val jobId = application?.jobId
-                    val applicationStatus = application?.applicationStatus
-                    if (jobId != null && applicationStatus != null) {
-                        fetchJobDetails(jobId, applicationStatus)
+                    val job_id = application?.job_id
+                    val applicationStatus = application?.application_status
+                    if (job_id != null && applicationStatus != null) {
+                        fetchJobDetails(job_id, applicationStatus)
                     }
                 }
             } else {
@@ -122,12 +122,12 @@ class ApplicationsFragment : Fragment() {
 
 
 
-    private fun fetchJobDetails(jobId: String, applicationStatus: String) {
+    private fun fetchJobDetails(job_id: String, applicationStatus: String) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid // Get the current signed-in userId
 
         // Query the applications collection for documents that match the userId and the jobId
-        db.collection("applications")
-            .whereEqualTo("userId", userId)  // Filter by the userId
+        db.collection("tbl_applications")
+            .whereEqualTo("user_id", userId)  // Filter by the userId
             .get()
             .addOnSuccessListener { snapshot ->
                 if (!snapshot.isEmpty) {
@@ -136,19 +136,19 @@ class ApplicationsFragment : Fragment() {
                         val applicationData = document.toObject(Application::class.java)
                         applicationData?.let {
                             // Check if the jobId in the application matches the current jobId
-                            if (it.jobId == jobId) {
+                            if (it.job_id == job_id) {
                                 // Create an Application object with job details and application status
                                 val application = Application(
-                                    jobId = jobId,
-                                    jobTitle = it.jobTitle,
-                                    companyName = it.companyName,
+                                    job_id = job_id,
+                                    job_title = it.job_title,
+                                    company_name = it.company_name,
                                     location = it.location,
                                     description = it.description,
                                     salary = it.salary,
                                     requirements = it.requirements,
                                     postedOn = it.postedOn,
-                                    applicationStatus = applicationStatus,  // Use the status passed to the function
-                                    date = it.date // You can replace with actual application date if available
+                                    application_status = applicationStatus,  // Use the status passed to the function
+                                    applied_on = it.applied_on // You can replace with actual application date if available
                                 )
                                 // Add to the list and update the UI
                                 applicationList.add(application)

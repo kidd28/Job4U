@@ -95,7 +95,7 @@ class CompanyProfile : Fragment() {
 
         companyRef.get().addOnSuccessListener { snapshot ->
             if (snapshot.exists()) {
-                val companyName = snapshot.getString("companyName")
+                val company_name = snapshot.getString("company_name")
                 val companyEmail = snapshot.getString("companyEmail")
                 val companyPhone = snapshot.getString("companyPhone")
                 val companyWebsite = snapshot.getString("companyWebsite")
@@ -109,7 +109,7 @@ class CompanyProfile : Fragment() {
                 val companyImageUrl = snapshot.getString("companyImage")
 
                 // Populate the fields
-                companyNameTextView.text = companyName
+                companyNameTextView.text = company_name
                 companyEmailTextView.text = companyEmail
                 companyPhoneTextView.text = "Phone: $companyPhone"
                 companyWebsiteTextView.text = "Website: $companyWebsite"

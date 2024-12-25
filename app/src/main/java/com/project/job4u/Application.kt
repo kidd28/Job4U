@@ -6,17 +6,17 @@ import kotlinx.android.parcel.Parcelize
 @Parcelize
 data class Application(
 
-    val jobId: String = "",  // Make sure jobId is defined here
-    val jobTitle: String = "",
-    val companyName: String = "",
+    val job_id: String = "",  // Make sure jobId is defined here
+    val job_title: String = "",
+    val company_name: String = "",
     val location: String = "",
     val description: String = "",
     val salary: String = "",
     val requirements: String = "",
     val postedOn: String = "",
-    val applicationStatus: String = "",
-    val date: String = "",
-    val userId: String = "",
+    val application_status: String = "",
+    val applied_on: String = "",
+    val user_id: String = "",
     val postedBy: String = "",
     val applicantName : String = "",
     val applicantEmail : String = "",

@@ -122,12 +122,13 @@
                         android:text="Date applied"
                         android:textAppearance="?attr/textAppearanceBody2" />
                     <TextView
+                        android:id="@+id/tvDateApplied"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:paddingBottom="@dimen/_4sdp"                    android:text="Date applied"
+                        android:paddingBottom="@dimen/_4sdp"
+                        android:text="Date applied"
                         android:textAppearance="?attr/textAppearanceBody2" />
                     <TextView
-                        android:id="@+id/tvDateApplied"
                         android:textStyle="bold"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"

@@ -79,7 +79,7 @@ class CompanyInfo : AppCompatActivity() {
 
         // Create a map for the company data
         val companyData = mapOf(
-            "companyName" to companyName,
+            "company_name" to companyName,
             "companyEmail" to companyEmail,
             "companyPhone" to companyPhone,
             "companyWebsite" to companyWebsite,

@@ -39,13 +39,7 @@ class EmployerSignIn : AppCompatActivity() {
             insets
         }
 
-        // Configure Google SignIn
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getString(R.string.default_web_client_id)) // Use your web client ID
-            .requestEmail()
-            .build()
 
-        googleSignInClient = GoogleSignIn.getClient(this, gso)
 
         val employer: TextView = findViewById(R.id.applicant)
         val email_input: EditText = findViewById(R.id.email_input)
@@ -53,7 +47,7 @@ class EmployerSignIn : AppCompatActivity() {
         val sign_in_button: MaterialButton = findViewById(R.id.sign_in_button)
         val sign_up_link: TextView = findViewById(R.id.sign_up_link)
         val forgot_password: TextView = findViewById(R.id.forgot_password)
-        val google_signin: MaterialButton = findViewById(R.id.google_signin)
+
 
 
         employer.setOnClickListener {
@@ -70,9 +64,6 @@ class EmployerSignIn : AppCompatActivity() {
         // Initialize Firebase Auth
         auth = FirebaseAuth.getInstance()
 
-        google_signin.setOnClickListener {
-            signIn()
-        }
         sign_in_button.setOnClickListener {
             // Get the email and password from input fields
             val email = email_input.text.toString().trim()
@@ -84,50 +75,6 @@ class EmployerSignIn : AppCompatActivity() {
             } else {
                 signInUser(email, password)
             }
-        }
-    }
-    // Google Sign-In function
-    private fun signIn() {
-        val signInIntent = googleSignInClient.signInIntent
-        startActivityForResult(signInIntent, RC_SIGN_IN)
-    }
-    // Handle the result of the Google Sign-In Intent
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...)
-        if (requestCode == RC_SIGN_IN) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-            try {
-                // Google Sign In was successful, authenticate with Firebase
-                val account = task.getResult(ApiException::class.java)
-                firebaseAuthWithGoogle(account!!)
-            } catch (e: ApiException) {
-                // Google Sign-In failed, update UI appropriately
-                Toast.makeText(this, "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    // Firebase authentication with Google Sign-In token
-    private fun firebaseAuthWithGoogle(account: GoogleSignInAccount) {
-        val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-        auth.signInWithCredential(credential)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    // Sign in success
-                    val user = auth.currentUser
-                    checkUserStatus(task.result?.additionalUserInfo?.isNewUser, user)
-                } else {
-                    Log.w("SignIn", "signInWithCredential:failure", task.exception)
-                }
-            }
-    }
-    private fun checkUserStatus(isNewUser: Boolean?, user: FirebaseUser?) {
-        if (isNewUser == true) {
-            startActivity(Intent(this, CompanyInfo::class.java))
-            finish()
-        } else {
-            startActivity(Intent(this, MainActivity::class.java))
         }
     }
 

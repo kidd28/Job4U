@@ -20,6 +20,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.project.job4u.Authentication.SignInActivity
 import com.project.job4u.MainActivity
 import com.project.job4u.R
+import com.project.job4u.ResumePreview
 import de.hdodenhof.circleimageview.CircleImageView
 
 private const val ARG_PARAM1 = "param1"
@@ -38,6 +39,7 @@ class ProfileFragment : Fragment() {
     private lateinit var signed_in: CardView
     private lateinit var not_signedin: LinearLayout
     private lateinit var sign_in_button: MaterialButton
+    private lateinit var resume: MaterialButton
     private var imageUri: Uri? = null
     private val PICK_IMAGE_REQUEST = 71
 
@@ -67,6 +69,7 @@ class ProfileFragment : Fragment() {
         dobTextView = view.findViewById(R.id.profile_dob)
         addressTextView = view.findViewById(R.id.profile_address)
         resumeTextView = view.findViewById(R.id.profile_resume)
+        resume = view.findViewById(R.id.resume)
 
         signed_in = view.findViewById(R.id.signed_in)
         not_signedin = view.findViewById(R.id.not_signedin)
@@ -80,7 +83,14 @@ class ProfileFragment : Fragment() {
         profileImage.setOnClickListener {
             openImagePicker()
         }
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        resume.setOnClickListener {
+            val i= Intent(requireContext(), ResumePreview::class.java)
+                i.putExtra("resume", "")
+                i.putExtra("applicantuserId",userId)
 
+            startActivity(i)
+        }
         loadUserProfile()
         return view
     }
@@ -97,7 +107,7 @@ class ProfileFragment : Fragment() {
             not_signedin.visibility = View.GONE
         }
 
-        val userRef = FirebaseFirestore.getInstance().collection("users").document(userId)
+        val userRef = FirebaseFirestore.getInstance().collection("tbl_users").document(userId)
         userRef.get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
@@ -124,7 +134,7 @@ class ProfileFragment : Fragment() {
                     resumeTextView.text = "Resume Uploaded: ${resume ?: "No resume uploaded"}"
 
                     // Load profile image using Glide
-                    Glide.with(this@ProfileFragment)
+                    Glide.with(requireContext())
                         .load(profileImageUrl)
                         .placeholder(R.drawable.ic_profile)
                         .error(R.drawable.ic_profile)

@@ -106,54 +106,6 @@
                 app:backgroundTint="#2196F3"
                 app:cornerRadius="@dimen/_14sdp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/_25sdp"
-                android:layout_marginRight="@dimen/_25sdp"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1"
-                    android:background="@android:color/darker_gray" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="8dp"
-                    android:layout_marginRight="8dp"
-                    android:text="OR"
-                    android:textColor="@android:color/darker_gray"
-                    android:textSize="16sp" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1"
-                    android:background="@android:color/darker_gray" />
-            </LinearLayout>
-            <!-- Material Sign In Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/google_signin"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:paddingTop="@dimen/_14sdp"
-                android:paddingRight="@dimen/_14sdp"
-                android:paddingBottom="@dimen/_14sdp"
-                android:text="Sign In using Google"
-                android:textColor="@android:color/white"
-                android:textSize="@dimen/_12sdp"
-                android:layout_marginStart="@dimen/_40sdp"
-                android:layout_marginEnd="@dimen/_40sdp"
-                app:backgroundTint="#2196F3"
-                app:cornerRadius="@dimen/_14sdp"
-                app:icon="@drawable/google"
-                app:iconGravity="start"
-                app:iconPadding="@dimen/_14sdp" />
 
 
             <TextView
